@@ -1,31 +1,33 @@
-# DanDoeTech PackageSkeleton
+# Laravel Generic API
 
-> A modern PHP package skeleton with CI, QA and quality reporting — ready for Packagist.
-
-![Build](https://github.com/dandoetech/package-skeleton/actions/workflows/tests.yml/badge.svg)
-![Static Analysis](https://github.com/dandoetech/package-skeleton/actions/workflows/static-analysis.yml/badge.svg)
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/b7ccf297da214db5a81604b88ae0e704)](https://app.codacy.com?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
-[![Codacy Badge](https://app.codacy.com/project/badge/Coverage/b7ccf297da214db5a81604b88ae0e704)](https://app.codacy.com?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_coverage)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=dandoetech_package-skeleton&metric=alert_status&token=0f6e812685c39ef11dcfff8b33a14c0c529a6fe1)](https://sonarcloud.io/summary/new_code?id=dandoetech_package-skeleton)
+Registry-driven CRUD proxy for Laravel: validation, policies, filtering, and consistent JSON responses.
 
 ## Install
-
-```bash
-composer require dandoetech/package-skeleton
+```
+composer require dandoetech/laravel-generic-api  
+php artisan vendor:publish --tag=generic-api-config
 ```
 
-## Usage
+## Configure
+- Map resources to Eloquent models in `config/generic_api.php` (`resource_to_model`).
+- Optionally whitelist `filterable` / `sortable` fields per resource.
 
-```php
-<?php
+## Use
+- `GET    /api/{resource}`
+- `GET    /api/{resource}/{id}`
+- `POST   /api/{resource}`
+- `PATCH  /api/{resource}/{id}`
+- `DELETE /api/{resource}/{id}`
 
-declare(strict_types=1);
+Responses:
+- list: `{ data: [...], meta: { page, perPage, total, lastPage } }`
+- item: `{ data: {...} }`
 
-use DanDoeTech\PackageSkeleton\Example;
+## Security & Validation
+- Validation is derived from your `resource-registry` field rules and nullability.
+- Mass-assignment protection via allowed field list from registry.
+- Authorization via policies/gates (`viewAny`, `view`, `create`, `update`, `delete`).
 
-$ex = new Example();
-echo $ex->greet('World'); // Hello, World!
-```
 
 ## Development
 
