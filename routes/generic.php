@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use DanDoeTech\LaravelGenericApi\Http\Controllers\GenericController;
 use DanDoeTech\LaravelGenericApi\Http\Middleware\AuthorizeResource;
 use Illuminate\Support\Facades\Route;
