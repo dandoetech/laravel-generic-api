@@ -10,6 +10,8 @@
         "illuminate/routing": "^10.0 || ^11.0 || ^12.0",
         "illuminate/validation": "^10.0 || ^11.0 || ^12.0",
         "illuminate/auth": "^10.0 || ^11.0 || ^12.0",
+        "illuminate/contracts": "^10.0 || ^11.0 || ^12.0",
+        "illuminate/http": "^10.0 || ^11.0 || ^12.0",
         "illuminate/database": "^10.0 || ^11.0 || ^12.0",
         "dandoetech/resource-registry": "dev-main as 0.1.0",
         "dandoetech/laravel-resource-registry": "dev-master as 0.1.0"
