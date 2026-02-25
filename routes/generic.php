@@ -6,7 +6,7 @@ use DanDoeTech\LaravelGenericApi\Http\Controllers\GenericController;
 use DanDoeTech\LaravelGenericApi\Http\Middleware\AuthorizeResource;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix(config('generic_api.prefix', 'api'))
+Route::prefix(config('ddt_api.prefix', 'api'))
     ->middleware(['api', AuthorizeResource::class])
     ->group(function () {
         Route::get('{resource}', [GenericController::class, 'index']);

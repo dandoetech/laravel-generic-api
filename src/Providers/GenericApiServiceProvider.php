@@ -17,7 +17,7 @@ final class GenericApiServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->mergeConfigFrom(__DIR__ . '/../../config/generic_api.php', 'generic_api');
+        $this->mergeConfigFrom(__DIR__ . '/../../config/ddt_api.php', 'ddt_api');
 
         $this->app->bind(
             RepositoryAdapterInterface::class,
@@ -34,8 +34,8 @@ final class GenericApiServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->publishes([
-            __DIR__ . '/../../config/generic_api.php' => $this->app->configPath('generic_api.php'),
-        ], 'generic-api-config');
+            __DIR__ . '/../../config/ddt_api.php' => $this->app->configPath('ddt_api.php'),
+        ], 'ddt-api-config');
 
         $this->loadRoutesFrom(__DIR__ . '/../../routes/generic.php');
     }

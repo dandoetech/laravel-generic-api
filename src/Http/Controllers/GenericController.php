@@ -42,9 +42,9 @@ final class GenericController extends Controller
         $sortable = $resolved['sortable'] ?? ($res->getSortable() ?: ['id', 'created_at']);
 
         /** @var int $perDefault */
-        $perDefault = config('generic_api.pagination.per_page', 25);
+        $perDefault = config('ddt_api.pagination.per_page', 25);
         /** @var int $perMax */
-        $perMax = config('generic_api.pagination.max_per_page', 200);
+        $perMax = config('ddt_api.pagination.max_per_page', 200);
 
         /** @var array<string, mixed> $query */
         $query = $request->query();

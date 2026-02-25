@@ -17,7 +17,7 @@ final class CriteriaProfileResolver
     public static function resolve(string $resource, string $profile): ?array
     {
         /** @var array<string, array{filterable?: list<string>, sortable?: list<string>}> $profiles */
-        $profiles = (array) config("generic_api.query_profiles.{$resource}", []);
+        $profiles = (array) config("ddt_api.query_profiles.{$resource}", []);
 
         if (!isset($profiles[$profile])) {
             return null;

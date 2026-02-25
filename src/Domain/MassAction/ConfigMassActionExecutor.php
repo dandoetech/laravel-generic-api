@@ -12,7 +12,7 @@ final class ConfigMassActionExecutor implements MassActionExecutorInterface
     public function execute(MassActionRequest $request, ?Authenticatable $user = null): array
     {
         /** @var array<string, class-string<MassActionHandlerInterface>> $map */
-        $map = (array) config("generic_api.actions.{$request->resource}", []);
+        $map = (array) config("ddt_api.actions.{$request->resource}", []);
         $handlerClass = $map[$request->action] ?? null;
         if (!$handlerClass) {
             throw new InvalidArgumentException("Unknown mass action '{$request->action}' for resource '{$request->resource}'");
