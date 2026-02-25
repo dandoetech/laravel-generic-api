@@ -16,8 +16,6 @@ use DanDoeTech\LaravelGenericApi\Support\QueryCriteria;
 use DanDoeTech\LaravelGenericApi\Support\RegistryUtils;
 use DanDoeTech\ResourceRegistry\Contracts\ResourceDefinitionInterface;
 use DanDoeTech\ResourceRegistry\Registry\Registry;
-use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -25,8 +23,6 @@ use Illuminate\Routing\Controller;
 
 final class GenericController extends Controller
 {
-    use AuthorizesRequests;
-
     public function __construct(
         private readonly Registry $registry,
         private readonly RepositoryAdapterInterface $repo,
@@ -34,14 +30,9 @@ final class GenericController extends Controller
     ) {
     }
 
-    /**
-     * @throws AuthorizationException
-     */
     public function index(Request $request, string $resource): JsonResponse
     {
         $res = $this->resolve($resource);
-
-        //$this->authorize('viewAny', [$resource, $res]);
 
         // Criteria profile override (only when ?profile= is present and profile exists)
         $profile = $request->query('profile');
@@ -64,14 +55,9 @@ final class GenericController extends Controller
         return response()->json(ResourceJson::collection($out['data'], $out['meta']));
     }
 
-    /**
-     * @throws AuthorizationException
-     */
     public function show(string $resource, string $id): JsonResponse
     {
-        $res = $this->resolve($resource);
-
-        $this->authorize('view', [$resource, $id, $res]);
+        $this->resolve($resource);
 
         $item = $this->repo->find($resource, $id);
         abort_if(!$item, 404);
@@ -80,14 +66,9 @@ final class GenericController extends Controller
         return response()->json(ResourceJson::item($item));
     }
 
-    /**
-     * @throws AuthorizationException
-     */
     public function store(StoreRequest $request, string $resource): JsonResponse
     {
         $res = $this->resolve($resource);
-
-        $this->authorize('create', [$resource, $res]);
 
         $allowed = RegistryUtils::fieldNames($res);
         /** @var array<string, mixed> $validated */
@@ -100,14 +81,9 @@ final class GenericController extends Controller
         return response()->json(ResourceJson::item($created), 201);
     }
 
-    /**
-     * @throws AuthorizationException
-     */
     public function update(UpdateRequest $request, string $resource, string $id): JsonResponse
     {
         $res = $this->resolve($resource);
-
-        $this->authorize('update', [$resource, $id, $res]);
 
         $allowed = RegistryUtils::fieldNames($res);
         /** @var array<string, mixed> $validated */
@@ -120,32 +96,22 @@ final class GenericController extends Controller
         return response()->json(ResourceJson::item($updated));
     }
 
-    /**
-     * @throws AuthorizationException
-     */
     public function destroy(string $resource, string $id): Response
     {
-        $res = $this->resolve($resource);
-
-        $this->authorize('delete', [$resource, $id, $res]);
+        $this->resolve($resource);
 
         $this->repo->delete($resource, $id);
 
         return response()->noContent();
     }
 
-    /**
-     * @throws AuthorizationException
-     */
     public function action(ActionRequest $request, string $resource, string $action): JsonResponse
     {
         if ($this->actions === null) {
             abort(404, 'Mass actions are not configured');
         }
 
-        $res = $this->resolve($resource);
-
-        $this->authorize('action', [$resource, $action, $res]);
+        $this->resolve($resource);
 
         /** @var list<string|int> $ids */
         $ids = $request->validated('ids');
