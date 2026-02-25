@@ -5,22 +5,9 @@ declare(strict_types=1);
 return [
     'prefix' => env('GENERIC_API_PREFIX', 'api/v1'),
 
-    // Map resource key -> Eloquent model
-    'resource_to_model' => [
-        // 'product' => App\Models\Product::class,
-    ],
-
     'pagination' => [
         'per_page' => 25,
         'max_per_page' => 200,
-    ],
-
-    // Allowlist for filtering/sorting (fallbacks still exist in controller)
-    'query' => [
-        // 'product' => [
-        //   'filterable' => ['name','price','category_id','created_at'],
-        //   'sortable'   => ['id','name','price','created_at'],
-        // ],
     ],
 
     // Named profiles you can pick via ?profile=admin (CriteriaProfile)

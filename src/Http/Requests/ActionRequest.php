@@ -8,12 +8,13 @@ use Illuminate\Foundation\Http\FormRequest;
 
 final class ActionRequest extends FormRequest
 {
+    /** @return array<string, list<string>> */
     public function rules(): array
     {
         return [
-            'ids' => ['required','array','min:1'],
-            'ids.*' => ['integer'], // adjust if string keys
-            'payload' => ['sometimes','array'],
+            'ids'     => ['required', 'array', 'min:1'],
+            'ids.*'   => ['integer'],
+            'payload' => ['sometimes', 'array'],
         ];
     }
 

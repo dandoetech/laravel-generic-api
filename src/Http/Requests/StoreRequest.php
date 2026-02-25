@@ -9,9 +9,11 @@ use Illuminate\Foundation\Http\FormRequest;
 
 final class StoreRequest extends FormRequest
 {
+    /** @return array<string, string> */
     public function rules(): array
     {
-        $resource = (string) $this->route('resource');
+        /** @var string $resource */
+        $resource = $this->route('resource', '');
         /** @var Registry $registry */
         $registry = app(Registry::class);
         $res = $registry->getResource($resource);
@@ -21,11 +23,11 @@ final class StoreRequest extends FormRequest
         }
 
         $rules = [];
-        foreach ($res->fields as $f) {
-            if ($f->rules !== []) {
-                $rules[$f->name] = implode('|', $f->rules);
-            } elseif ($f->nullable === false) {
-                $rules[$f->name] = 'required';
+        foreach ($res->getFields() as $f) {
+            if ($f->getRules() !== []) {
+                $rules[$f->getName()] = \implode('|', $f->getRules());
+            } elseif ($f->isNullable() === false) {
+                $rules[$f->getName()] = 'required';
             }
         }
 

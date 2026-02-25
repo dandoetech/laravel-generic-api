@@ -9,9 +9,11 @@ use Illuminate\Foundation\Http\FormRequest;
 
 final class UpdateRequest extends FormRequest
 {
+    /** @return array<string, string> */
     public function rules(): array
     {
-        $resource = (string) $this->route('resource');
+        /** @var string $resource */
+        $resource = $this->route('resource', '');
         /** @var Registry $registry */
         $registry = app(Registry::class);
         $res = $registry->getResource($resource);
@@ -21,12 +23,12 @@ final class UpdateRequest extends FormRequest
         }
 
         $rules = [];
-        foreach ($res->fields as $f) {
+        foreach ($res->getFields() as $f) {
             // make rules nullable for PATCH semantics unless explicitly required
-            if ($f->rules !== []) {
-                $rules[$f->name] = 'sometimes|' . implode('|', array_filter($f->rules, fn ($r) => $r !== 'required'));
+            if ($f->getRules() !== []) {
+                $rules[$f->getName()] = 'sometimes|' . \implode('|', \array_filter($f->getRules(), fn ($r) => $r !== 'required'));
             } else {
-                $rules[$f->name] = 'sometimes';
+                $rules[$f->getName()] = 'sometimes';
             }
         }
 

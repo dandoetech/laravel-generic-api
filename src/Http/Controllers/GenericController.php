@@ -14,6 +14,7 @@ use DanDoeTech\LaravelGenericApi\Http\Resources\ResourceJson;
 use DanDoeTech\LaravelGenericApi\Support\CriteriaProfileResolver;
 use DanDoeTech\LaravelGenericApi\Support\QueryCriteria;
 use DanDoeTech\LaravelGenericApi\Support\RegistryUtils;
+use DanDoeTech\ResourceRegistry\Contracts\ResourceDefinitionInterface;
 use DanDoeTech\ResourceRegistry\Registry\Registry;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -29,7 +30,7 @@ final class GenericController extends Controller
     public function __construct(
         private readonly Registry $registry,
         private readonly RepositoryAdapterInterface $repo,
-        private readonly ?MassActionExecutorInterface $actions = null
+        private readonly ?MassActionExecutorInterface $actions = null,
     ) {
     }
 
@@ -38,26 +39,26 @@ final class GenericController extends Controller
      */
     public function index(Request $request, string $resource): JsonResponse
     {
-        $res = $this->registry->getResource($resource);
-        abort_if(!$res, 404, "Unknown resource '$resource'");
+        $res = $this->resolve($resource);
 
         //$this->authorize('viewAny', [$resource, $res]);
 
-        // Criteria profile support
+        // Criteria profile override (only when ?profile= is present and profile exists)
         $profile = $request->query('profile');
-        $resolved = CriteriaProfileResolver::resolve($resource, is_string($profile) ? $profile : null);
+        $resolved = \is_string($profile) ? CriteriaProfileResolver::resolve($resource, $profile) : null;
 
-        $filterable = $resolved['filterable'] ?: RegistryUtils::fieldNames($res);
-        $sortable   = $resolved['sortable'] ?: ['id','created_at'];
+        $filterable = $resolved['filterable'] ?? ($res->getFilterable() ?: RegistryUtils::fieldNames($res));
+        $sortable = $resolved['sortable'] ?? ($res->getSortable() ?: ['id', 'created_at']);
 
-        $perDefault = (int) config('generic_api.pagination.per_page', 25);
-        $perMax     = (int) config('generic_api.pagination.max_per_page', 200);
+        /** @var int $perDefault */
+        $perDefault = config('generic_api.pagination.per_page', 25);
+        /** @var int $perMax */
+        $perMax = config('generic_api.pagination.max_per_page', 200);
 
-        $criteria = QueryCriteria::from($request->query(), $filterable, $sortable, $perDefault, $perMax);
+        /** @var array<string, mixed> $query */
+        $query = $request->query();
+        $criteria = QueryCriteria::from($query, $filterable, $sortable, $perDefault, $perMax);
 
-        // Apply resource scope if configured
-        // (Only relevant for Eloquent adapter; scope is applied inside the adapter via a hook or here if you expose it)
-        // Here we pass criteria; adapter can call ScopeApplier if it supports Builder access.
         $out = $this->repo->paginate($resource, $criteria);
 
         return response()->json(ResourceJson::collection($out['data'], $out['meta']));
@@ -68,14 +69,14 @@ final class GenericController extends Controller
      */
     public function show(string $resource, string $id): JsonResponse
     {
-        $res = $this->registry->getResource($resource);
-        abort_if(!$res, 404);
+        $res = $this->resolve($resource);
 
         $this->authorize('view', [$resource, $id, $res]);
 
         $item = $this->repo->find($resource, $id);
         abort_if(!$item, 404);
 
+        /** @var array<string, mixed> $item */
         return response()->json(ResourceJson::item($item));
     }
 
@@ -84,15 +85,18 @@ final class GenericController extends Controller
      */
     public function store(StoreRequest $request, string $resource): JsonResponse
     {
-        $res = $this->registry->getResource($resource);
-        abort_if(!$res, 404);
+        $res = $this->resolve($resource);
 
         $this->authorize('create', [$resource, $res]);
 
         $allowed = RegistryUtils::fieldNames($res);
-        $data = array_intersect_key($request->validated(), array_flip($allowed));
+        /** @var array<string, mixed> $validated */
+        $validated = $request->validated();
+        /** @var array<string, mixed> $data */
+        $data = \array_intersect_key($validated, \array_flip($allowed));
 
         $created = $this->repo->create($resource, $data);
+
         return response()->json(ResourceJson::item($created), 201);
     }
 
@@ -101,15 +105,18 @@ final class GenericController extends Controller
      */
     public function update(UpdateRequest $request, string $resource, string $id): JsonResponse
     {
-        $res = $this->registry->getResource($resource);
-        abort_if(!$res, 404);
+        $res = $this->resolve($resource);
 
         $this->authorize('update', [$resource, $id, $res]);
 
         $allowed = RegistryUtils::fieldNames($res);
-        $data = array_intersect_key($request->validated(), array_flip($allowed));
+        /** @var array<string, mixed> $validated */
+        $validated = $request->validated();
+        /** @var array<string, mixed> $data */
+        $data = \array_intersect_key($validated, \array_flip($allowed));
 
         $updated = $this->repo->update($resource, $id, $data);
+
         return response()->json(ResourceJson::item($updated));
     }
 
@@ -118,12 +125,12 @@ final class GenericController extends Controller
      */
     public function destroy(string $resource, string $id): Response
     {
-        $res = $this->registry->getResource($resource);
-        abort_if(!$res, 404);
+        $res = $this->resolve($resource);
 
         $this->authorize('delete', [$resource, $id, $res]);
 
         $this->repo->delete($resource, $id);
+
         return response()->noContent();
     }
 
@@ -132,20 +139,42 @@ final class GenericController extends Controller
      */
     public function action(ActionRequest $request, string $resource, string $action): JsonResponse
     {
-        abort_if(!$this->actions, 404, 'Mass actions are not configured');
-        $res = $this->registry->getResource($resource);
-        abort_if(!$res, 404);
+        if ($this->actions === null) {
+            abort(404, 'Mass actions are not configured');
+        }
 
-        $this->authorize('action', [$resource, $action, $res]); // add a policy method for actions
+        $res = $this->resolve($resource);
 
+        $this->authorize('action', [$resource, $action, $res]);
+
+        /** @var list<string|int> $ids */
         $ids = $request->validated('ids');
-        $payload = (array) ($request->validated()['payload'] ?? []);
+        /** @var array<string, mixed> $validated */
+        $validated = $request->validated();
+        /** @var array<string, mixed> $payload */
+        $payload = (array) ($validated['payload'] ?? []);
+
+        /** @var \Illuminate\Contracts\Auth\Authenticatable|null $user */
+        $user = $request->user();
 
         $result = $this->actions->execute(
             new MassActionRequest($resource, $action, $ids, $payload),
-            $request->user()
+            $user,
         );
 
         return response()->json(['data' => $result]);
+    }
+
+    /**
+     * Look up a resource by key, aborting with 404 if not found.
+     */
+    private function resolve(string $resource): ResourceDefinitionInterface
+    {
+        $res = $this->registry->getResource($resource);
+        if ($res === null) {
+            abort(404, "Unknown resource '$resource'");
+        }
+
+        return $res;
     }
 }

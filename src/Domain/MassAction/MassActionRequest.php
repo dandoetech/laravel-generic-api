@@ -13,7 +13,7 @@ final class MassActionRequest
         public string $action,
         public array $ids,
         /** @var array<string,mixed> */
-        public array $payload = []
+        public array $payload = [],
     ) {
     }
 }

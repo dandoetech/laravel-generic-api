@@ -6,28 +6,28 @@ namespace DanDoeTech\LaravelGenericApi\Support;
 
 /**
  * Resolves filterable/sortable config for a resource given a profile name.
+ *
+ * Returns null when no matching profile is found.
  */
 final class CriteriaProfileResolver
 {
     /**
-     * @return array{filterable:list<string>, sortable:list<string>}
+     * @return array{filterable: list<string>, sortable: list<string>}|null
      */
-    public static function resolve(string $resource, ?string $profile): array
+    public static function resolve(string $resource, string $profile): ?array
     {
+        /** @var array<string, array{filterable?: list<string>, sortable?: list<string>}> $profiles */
         $profiles = (array) config("generic_api.query_profiles.{$resource}", []);
-        if ($profile && isset($profiles[$profile])) {
-            $cfg = (array) $profiles[$profile];
-            return [
-                'filterable' => array_values($cfg['filterable'] ?? []),
-                'sortable'   => array_values($cfg['sortable']   ?? []),
-            ];
+
+        if (!isset($profiles[$profile])) {
+            return null;
         }
 
-        // Fallback to base query allowlist
-        $base = (array) config("generic_api.query.{$resource}", []);
+        $cfg = $profiles[$profile];
+
         return [
-            'filterable' => array_values($base['filterable'] ?? []),
-            'sortable'   => array_values($base['sortable']   ?? []),
+            'filterable' => \array_values($cfg['filterable'] ?? []),
+            'sortable'   => \array_values($cfg['sortable'] ?? []),
         ];
     }
 }

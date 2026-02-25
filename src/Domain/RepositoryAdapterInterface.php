@@ -6,16 +6,30 @@ namespace DanDoeTech\LaravelGenericApi\Domain;
 
 interface RepositoryAdapterInterface
 {
-    /** @return array{data: list<array<string,mixed>>, meta: array<string,mixed>} */
+    /**
+     * @param array{
+     *     filters?: array<string, mixed>,
+     *     sort?: list<array{0: string, 1: 'asc'|'desc'}>,
+     *     page?: int,
+     *     perPage?: int,
+     * } $criteria
+     * @return array{data: list<array<string, mixed>>, meta: array<string, mixed>}
+     */
     public function paginate(string $resource, array $criteria): array;
 
-    /** @return array<string,mixed>|null */
+    /** @return array<string, mixed>|null */
     public function find(string $resource, string $id): ?array;
 
-    /** @return array<string,mixed> */
+    /**
+     * @param  array<string, mixed> $attributes
+     * @return array<string, mixed>
+     */
     public function create(string $resource, array $attributes): array;
 
-    /** @return array<string,mixed> */
+    /**
+     * @param  array<string, mixed> $attributes
+     * @return array<string, mixed>
+     */
     public function update(string $resource, string|int $id, array $attributes): array;
 
     public function delete(string $resource, string|int $id): void;

@@ -8,6 +8,9 @@ use DanDoeTech\LaravelGenericApi\Domain\EloquentRepositoryAdapter;
 use DanDoeTech\LaravelGenericApi\Domain\MassAction\ConfigMassActionExecutor;
 use DanDoeTech\LaravelGenericApi\Domain\MassAction\MassActionExecutorInterface;
 use DanDoeTech\LaravelGenericApi\Domain\RepositoryAdapterInterface;
+use DanDoeTech\LaravelResourceRegistry\Resolvers\ViaResolverFactory;
+use DanDoeTech\ResourceRegistry\Registry\Registry;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 
 final class GenericApiServiceProvider extends ServiceProvider
@@ -18,15 +21,11 @@ final class GenericApiServiceProvider extends ServiceProvider
 
         $this->app->bind(
             RepositoryAdapterInterface::class,
-            fn ($app) => new EloquentRepositoryAdapter(
-                (array) config('generic_api.resource_to_model', [])
-            )
-        );
-
-        $this->app->bind(
-            RepositoryAdapterInterface::class,
-            fn () =>
-        new EloquentRepositoryAdapter((array) config('generic_api.resource_to_model', []))
+            static fn (Application $app) => new EloquentRepositoryAdapter(
+                $app->make(Registry::class),
+                $app->make(ViaResolverFactory::class),
+                $app,
+            ),
         );
 
         $this->app->bind(MassActionExecutorInterface::class, fn () => new ConfigMassActionExecutor());
