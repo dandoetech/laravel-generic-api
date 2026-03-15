@@ -9,6 +9,8 @@ use DanDoeTech\LaravelResourceRegistry\Contracts\HasEloquentModel;
 use DanDoeTech\LaravelResourceRegistry\Contracts\HasScope;
 use DanDoeTech\LaravelResourceRegistry\Resolvers\ViaResolverFactory;
 use DanDoeTech\ResourceRegistry\Contracts\ComputedFieldDefinitionInterface;
+use DanDoeTech\ResourceRegistry\Contracts\ResourceDefinitionInterface;
+use DanDoeTech\ResourceRegistry\Definition\FieldType;
 use DanDoeTech\ResourceRegistry\Registry\Registry;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Container\Container;
@@ -44,9 +46,13 @@ final class EloquentRepositoryAdapter implements RepositoryAdapterInterface
         }
 
         // Filtering: delegate to resolver for computed fields, where() for regular
+        // String fields use LIKE for partial matching, others use exact match
+        $stringFields = $this->getStringFieldNames($res);
         foreach (($criteria['filters'] ?? []) as $field => $value) {
             if (isset($resolverMap[$field])) {
                 $builder = $resolverMap[$field]->filter($builder, $value);
+            } elseif (\in_array($field, $stringFields, true)) {
+                $builder->where($field, 'LIKE', '%' . $value . '%');
             } else {
                 $builder->where($field, $value);
             }
@@ -172,6 +178,25 @@ final class EloquentRepositoryAdapter implements RepositoryAdapterInterface
         }
 
         return $res;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function getStringFieldNames(?ResourceDefinitionInterface $res): array
+    {
+        if ($res === null) {
+            return [];
+        }
+
+        $names = [];
+        foreach ($res->getFields() as $field) {
+            if ($field->getType() === FieldType::String) {
+                $names[] = $field->getName();
+            }
+        }
+
+        return $names;
     }
 
     private function resolveComputed(ComputedFieldDefinitionInterface $computed): ?EloquentComputedResolver
