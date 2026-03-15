@@ -4,10 +4,10 @@
     "type": "library",
     "license": "MIT",
     "authors": [{ "name": "Danilo Doelle", "email": "oss@dandoe.tech" }],
-    "homepage": "https://github.com/dandoe-tech/laravel-generic-api",
+    "homepage": "https://github.com/dandoetech/laravel-generic-api",
     "keywords": ["php", "laravel", "crud", "api", "rest", "generic-controller"],
     "require": {
-        "php": "^8.2 || ^8.3 || ^8.4",
+        "php": "^8.2",
         "illuminate/support": "^10.0 || ^11.0 || ^12.0",
         "illuminate/routing": "^10.0 || ^11.0 || ^12.0",
         "illuminate/validation": "^10.0 || ^11.0 || ^12.0",
