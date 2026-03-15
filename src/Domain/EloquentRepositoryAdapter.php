@@ -48,9 +48,14 @@ final class EloquentRepositoryAdapter implements RepositoryAdapterInterface
         // Filtering: delegate to resolver for computed fields, where() for regular
         // String fields use LIKE for partial matching, others use exact match
         $stringFields = $this->getStringFieldNames($res);
+        $stringComputedFields = $this->getStringComputedFieldNames($res);
         foreach (($criteria['filters'] ?? []) as $field => $value) {
             if (isset($resolverMap[$field])) {
-                $builder = $resolverMap[$field]->filter($builder, $value);
+                if (\in_array($field, $stringComputedFields, true)) {
+                    $builder = $resolverMap[$field]->filter($builder, '%' . $value . '%', 'LIKE');
+                } else {
+                    $builder = $resolverMap[$field]->filter($builder, $value);
+                }
             } elseif (\in_array($field, $stringFields, true)) {
                 $builder->where($field, 'LIKE', '%' . $value . '%');
             } else {
@@ -193,6 +198,25 @@ final class EloquentRepositoryAdapter implements RepositoryAdapterInterface
         foreach ($res->getFields() as $field) {
             if ($field->getType() === FieldType::String) {
                 $names[] = $field->getName();
+            }
+        }
+
+        return $names;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function getStringComputedFieldNames(?ResourceDefinitionInterface $res): array
+    {
+        if ($res === null) {
+            return [];
+        }
+
+        $names = [];
+        foreach ($res->getComputedFields() as $computed) {
+            if ($computed->getType() === FieldType::String) {
+                $names[] = $computed->getName();
             }
         }
 
