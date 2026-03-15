@@ -6,9 +6,11 @@ namespace DanDoeTech\LaravelGenericApi\Domain;
 
 use DanDoeTech\LaravelResourceRegistry\Contracts\EloquentComputedResolver;
 use DanDoeTech\LaravelResourceRegistry\Contracts\HasEloquentModel;
+use DanDoeTech\LaravelResourceRegistry\Contracts\HasScope;
 use DanDoeTech\LaravelResourceRegistry\Resolvers\ViaResolverFactory;
 use DanDoeTech\ResourceRegistry\Contracts\ComputedFieldDefinitionInterface;
 use DanDoeTech\ResourceRegistry\Registry\Registry;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -87,7 +89,7 @@ final class EloquentRepositoryAdapter implements RepositoryAdapterInterface
 
     public function find(string $resource, string $id): ?array
     {
-        $m = $this->model($resource)::query()->find($id);
+        $m = $this->query($resource)->find($id);
 
         /** @var array<string, mixed>|null */
         return $m?->toArray();
@@ -126,11 +128,39 @@ final class EloquentRepositoryAdapter implements RepositoryAdapterInterface
     /** @return Builder<Model> */
     private function query(string $resource): Builder
     {
-        return $this->model($resource)::query();
+        $res = $this->resolveResource($resource);
+        $builder = $res->model()::query();
+
+        if ($res instanceof HasScope) {
+            $scope = $res->scope();
+            if ($scope !== null) {
+                /** @var \Illuminate\Contracts\Auth\Guard $guard */
+                $guard = $this->container->make('auth');
+                /** @var Authenticatable|null $user */
+                $user = $guard->user();
+                if ($scope instanceof \Closure) {
+                    /** @var Builder<Model> $builder */
+                    $builder = $scope($builder, $user);
+                } else {
+                    /** @var callable(Builder<Model>, Authenticatable|null): Builder<Model> $instance */
+                    $instance = $this->container->make($scope);
+                    $builder = $instance($builder, $user);
+                }
+            }
+        }
+
+        /** @var Builder<Model> */
+        return $builder;
     }
 
     /** @return class-string<Model> */
     private function model(string $resource): string
+    {
+        return $this->resolveResource($resource)->model();
+    }
+
+    /** @return HasEloquentModel */
+    private function resolveResource(string $resource): HasEloquentModel
     {
         $res = $this->registry->getResource($resource);
         if ($res === null) {
@@ -141,7 +171,7 @@ final class EloquentRepositoryAdapter implements RepositoryAdapterInterface
             throw new InvalidArgumentException("Resource '{$resource}' does not implement HasEloquentModel");
         }
 
-        return $res->model();
+        return $res;
     }
 
     private function resolveComputed(ComputedFieldDefinitionInterface $computed): ?EloquentComputedResolver
