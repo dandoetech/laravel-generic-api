@@ -145,6 +145,58 @@ final class GenericControllerTest extends TestCase
         $this->assertEquals(2, $response->json('meta.page'));
     }
 
+    // --- SEARCH ---
+
+    #[Test]
+    public function index_search_across_multiple_fields(): void
+    {
+        TestProduct::create(['name' => 'Widget Pro', 'price' => 100, 'category_id' => $this->categoryId]);
+        TestProduct::create(['name' => 'Phone', 'price' => 200, 'category_id' => $this->categoryId]);
+
+        $response = $this->getJson('/api/v1/product?search=Widget');
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data');
+        $this->assertEquals('Widget Pro', $response->json('data.0.name'));
+    }
+
+    #[Test]
+    public function index_search_with_no_results(): void
+    {
+        TestProduct::create(['name' => 'Phone', 'price' => 100, 'category_id' => $this->categoryId]);
+
+        $response = $this->getJson('/api/v1/product?search=NonExistent');
+
+        $response->assertOk()
+            ->assertJsonCount(0, 'data');
+    }
+
+    #[Test]
+    public function index_search_empty_term_returns_all(): void
+    {
+        TestProduct::create(['name' => 'Phone', 'price' => 100, 'category_id' => $this->categoryId]);
+        TestProduct::create(['name' => 'Tablet', 'price' => 200, 'category_id' => $this->categoryId]);
+
+        $response = $this->getJson('/api/v1/product?search=');
+
+        $response->assertOk()
+            ->assertJsonCount(2, 'data');
+    }
+
+    #[Test]
+    public function index_search_combined_with_filters(): void
+    {
+        TestProduct::create(['name' => 'Widget Pro', 'price' => 100, 'category_id' => $this->categoryId]);
+        TestProduct::create(['name' => 'Widget Basic', 'price' => 50, 'category_id' => $this->categoryId]);
+        TestProduct::create(['name' => 'Phone', 'price' => 100, 'category_id' => $this->categoryId]);
+
+        $response = $this->getJson('/api/v1/product?search=Widget&filter[price]=100');
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data');
+        $this->assertEquals('Widget Pro', $response->json('data.0.name'));
+    }
+
     // --- SHOW ---
 
     #[Test]

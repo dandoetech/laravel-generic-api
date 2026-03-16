@@ -7,6 +7,7 @@ namespace DanDoeTech\LaravelGenericApi\Providers;
 use DanDoeTech\LaravelGenericApi\Domain\EloquentRepositoryAdapter;
 use DanDoeTech\LaravelGenericApi\Domain\MassAction\ConfigMassActionExecutor;
 use DanDoeTech\LaravelGenericApi\Domain\MassAction\MassActionExecutorInterface;
+use DanDoeTech\LaravelGenericApi\Domain\QueryApplier;
 use DanDoeTech\LaravelGenericApi\Domain\RepositoryAdapterInterface;
 use DanDoeTech\LaravelResourceRegistry\Resolvers\ViaResolverFactory;
 use DanDoeTech\ResourceRegistry\Registry\Registry;
@@ -19,11 +20,19 @@ final class GenericApiServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__ . '/../../config/ddt_api.php', 'ddt_api');
 
+        $this->app->singleton(
+            QueryApplier::class,
+            static fn (Application $app) => new QueryApplier(
+                $app->make(ViaResolverFactory::class),
+                $app,
+            ),
+        );
+
         $this->app->bind(
             RepositoryAdapterInterface::class,
             static fn (Application $app) => new EloquentRepositoryAdapter(
                 $app->make(Registry::class),
-                $app->make(ViaResolverFactory::class),
+                $app->make(QueryApplier::class),
                 $app,
             ),
         );

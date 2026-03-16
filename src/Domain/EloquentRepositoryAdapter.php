@@ -4,13 +4,8 @@ declare(strict_types=1);
 
 namespace DanDoeTech\LaravelGenericApi\Domain;
 
-use DanDoeTech\LaravelResourceRegistry\Contracts\EloquentComputedResolver;
 use DanDoeTech\LaravelResourceRegistry\Contracts\HasEloquentModel;
 use DanDoeTech\LaravelResourceRegistry\Contracts\HasScope;
-use DanDoeTech\LaravelResourceRegistry\Resolvers\ViaResolverFactory;
-use DanDoeTech\ResourceRegistry\Contracts\ComputedFieldDefinitionInterface;
-use DanDoeTech\ResourceRegistry\Contracts\ResourceDefinitionInterface;
-use DanDoeTech\ResourceRegistry\Definition\FieldType;
 use DanDoeTech\ResourceRegistry\Registry\Registry;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Container\Container;
@@ -23,7 +18,7 @@ final class EloquentRepositoryAdapter implements RepositoryAdapterInterface
 {
     public function __construct(
         private readonly Registry $registry,
-        private readonly ViaResolverFactory $viaResolverFactory,
+        private readonly QueryApplier $queryApplier,
         private readonly Container $container,
     ) {
     }
@@ -33,34 +28,7 @@ final class EloquentRepositoryAdapter implements RepositoryAdapterInterface
         $builder = $this->query($resource);
         $res = $this->registry->getResource($resource);
 
-        [$builder, $resolverMap] = $this->applyComputedFields($builder, $res);
-
-        // Filtering: delegate to resolver for computed fields, where() for regular
-        // String fields use LIKE for partial matching, others use exact match
-        $stringFields = $this->getStringFieldNames($res);
-        $stringComputedFields = $this->getStringComputedFieldNames($res);
-        foreach (($criteria['filters'] ?? []) as $field => $value) {
-            if (isset($resolverMap[$field])) {
-                if (\in_array($field, $stringComputedFields, true)) {
-                    $builder = $resolverMap[$field]->filter($builder, '%' . $value . '%', 'LIKE');
-                } else {
-                    $builder = $resolverMap[$field]->filter($builder, $value);
-                }
-            } elseif (\in_array($field, $stringFields, true)) {
-                $builder->where($field, 'LIKE', '%' . $value . '%');
-            } else {
-                $builder->where($field, $value);
-            }
-        }
-
-        // Sorting: delegate to resolver for computed fields, orderBy() for regular
-        foreach (($criteria['sort'] ?? []) as [$field, $dir]) {
-            if (isset($resolverMap[$field])) {
-                $builder = $resolverMap[$field]->sort($builder, $dir);
-            } else {
-                $builder->orderBy($field, $dir);
-            }
-        }
+        $builder = $this->queryApplier->apply($builder, $res, $criteria);
 
         $perPage = (int) ($criteria['perPage'] ?? 25);
         $page = (int) ($criteria['page'] ?? 1);
@@ -93,7 +61,7 @@ final class EloquentRepositoryAdapter implements RepositoryAdapterInterface
         $builder = $this->query($resource);
         $res = $this->registry->getResource($resource);
 
-        [$builder] = $this->applyComputedFields($builder, $res);
+        $builder = $this->queryApplier->applyComputedFieldsOnly($builder, $res);
 
         $m = $builder->find($id);
 
@@ -137,27 +105,6 @@ final class EloquentRepositoryAdapter implements RepositoryAdapterInterface
         DB::transaction(function () use ($resource, $id): void {
             $this->model($resource)::query()->whereKey($id)->delete();
         });
-    }
-
-    /**
-     * @param  Builder<Model>                                                       $builder
-     * @return array{0: Builder<Model>, 1: array<string, EloquentComputedResolver>}
-     */
-    private function applyComputedFields(Builder $builder, ?ResourceDefinitionInterface $res): array
-    {
-        /** @var array<string, EloquentComputedResolver> $resolverMap */
-        $resolverMap = [];
-        if ($res !== null) {
-            foreach ($res->getComputedFields() as $computed) {
-                $resolver = $this->resolveComputed($computed);
-                if ($resolver !== null) {
-                    $resolverMap[$computed->getName()] = $resolver;
-                    $builder = $resolver->apply($builder);
-                }
-            }
-        }
-
-        return [$builder, $resolverMap];
     }
 
     /** @return Builder<Model> */
@@ -207,59 +154,5 @@ final class EloquentRepositoryAdapter implements RepositoryAdapterInterface
         }
 
         return $res;
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function getStringFieldNames(?ResourceDefinitionInterface $res): array
-    {
-        if ($res === null) {
-            return [];
-        }
-
-        $names = [];
-        foreach ($res->getFields() as $field) {
-            if ($field->getType() === FieldType::String) {
-                $names[] = $field->getName();
-            }
-        }
-
-        return $names;
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function getStringComputedFieldNames(?ResourceDefinitionInterface $res): array
-    {
-        if ($res === null) {
-            return [];
-        }
-
-        $names = [];
-        foreach ($res->getComputedFields() as $computed) {
-            if ($computed->getType() === FieldType::String) {
-                $names[] = $computed->getName();
-            }
-        }
-
-        return $names;
-    }
-
-    private function resolveComputed(ComputedFieldDefinitionInterface $computed): ?EloquentComputedResolver
-    {
-        $resolverClass = $computed->getResolver();
-        if ($resolverClass !== null) {
-            /** @var EloquentComputedResolver */
-            return $this->container->make($resolverClass);
-        }
-
-        $via = $computed->getVia();
-        if ($via !== null) {
-            return $this->viaResolverFactory->create($via, $computed->getName());
-        }
-
-        return null;
     }
 }

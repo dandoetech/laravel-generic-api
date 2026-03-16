@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace DanDoeTech\LaravelGenericApi\Tests\Repository;
 
 use DanDoeTech\LaravelGenericApi\Domain\EloquentRepositoryAdapter;
+use DanDoeTech\LaravelGenericApi\Domain\QueryApplier;
 use DanDoeTech\LaravelGenericApi\Tests\Fixtures\TestCategory;
 use DanDoeTech\LaravelGenericApi\Tests\Fixtures\TestProduct;
 use DanDoeTech\LaravelGenericApi\Tests\TestCase;
@@ -24,9 +25,10 @@ final class EloquentRepositoryAdapterTest extends TestCase
         $this->registerTestResources();
 
         \assert($this->app !== null);
+        $queryApplier = new QueryApplier(new ViaResolverFactory(), $this->app);
         $this->repo = new EloquentRepositoryAdapter(
             $this->app->make(Registry::class),
-            new ViaResolverFactory(),
+            $queryApplier,
             $this->app,
         );
 
