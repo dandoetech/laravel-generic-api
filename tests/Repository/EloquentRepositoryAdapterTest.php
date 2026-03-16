@@ -146,6 +146,18 @@ final class EloquentRepositoryAdapterTest extends TestCase
         $this->assertNull($result);
     }
 
+    #[Test]
+    public function find_includes_computed_fields(): void
+    {
+        $product = TestProduct::create(['name' => 'Phone', 'price' => 999, 'category_id' => $this->categoryId]);
+
+        $result = $this->repo->find('product', (string) $product->id);
+
+        $this->assertNotNull($result);
+        $this->assertArrayHasKey('category_name', $result);
+        $this->assertEquals('Electronics', $result['category_name']);
+    }
+
     // --- create ---
 
     #[Test]

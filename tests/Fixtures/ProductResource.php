@@ -32,6 +32,7 @@ final class ProductResource extends Resource implements HasEloquentModel, HasPol
             ->field('price', FieldType::Float, nullable: false, rules: ['required', 'numeric', 'min:0'])
             ->field('category_id', FieldType::Integer, nullable: false)
             ->belongsTo('category', target: 'category', foreignKey: 'category_id')
+            ->computed('category_name', FieldType::String, via: 'category.name')
             ->filterable(['name', 'price', 'category_id'])
             ->sortable(['name', 'price', 'created_at'])
             ->searchable(['name'])

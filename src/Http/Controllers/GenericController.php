@@ -7,6 +7,7 @@ namespace DanDoeTech\LaravelGenericApi\Http\Controllers;
 use DanDoeTech\LaravelGenericApi\Domain\MassAction\MassActionExecutorInterface;
 use DanDoeTech\LaravelGenericApi\Domain\MassAction\MassActionRequest;
 use DanDoeTech\LaravelGenericApi\Domain\RepositoryAdapterInterface;
+use DanDoeTech\LaravelGenericApi\Exceptions\InvalidCriteriaException;
 use DanDoeTech\LaravelGenericApi\Http\Requests\ActionRequest;
 use DanDoeTech\LaravelGenericApi\Http\Requests\StoreRequest;
 use DanDoeTech\LaravelGenericApi\Http\Requests\UpdateRequest;
@@ -48,7 +49,15 @@ final class GenericController extends Controller
 
         /** @var array<string, mixed> $query */
         $query = $request->query();
-        $criteria = QueryCriteria::from($query, $filterable, $sortable, $perDefault, $perMax);
+
+        try {
+            $criteria = QueryCriteria::from($query, $filterable, $sortable, $perDefault, $perMax);
+        } catch (InvalidCriteriaException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'errors'  => $e->toErrors(),
+            ], 422);
+        }
 
         $out = $this->repo->paginate($resource, $criteria);
 

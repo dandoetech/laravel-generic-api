@@ -16,6 +16,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 final class EloquentRepositoryAdapter implements RepositoryAdapterInterface
@@ -32,18 +33,7 @@ final class EloquentRepositoryAdapter implements RepositoryAdapterInterface
         $builder = $this->query($resource);
         $res = $this->registry->getResource($resource);
 
-        // Build resolver map for computed fields
-        /** @var array<string, EloquentComputedResolver> $resolverMap */
-        $resolverMap = [];
-        if ($res !== null) {
-            foreach ($res->getComputedFields() as $computed) {
-                $resolver = $this->resolveComputed($computed);
-                if ($resolver !== null) {
-                    $resolverMap[$computed->getName()] = $resolver;
-                    $builder = $resolver->apply($builder);
-                }
-            }
-        }
+        [$builder, $resolverMap] = $this->applyComputedFields($builder, $res);
 
         // Filtering: delegate to resolver for computed fields, where() for regular
         // String fields use LIKE for partial matching, others use exact match
@@ -100,7 +90,12 @@ final class EloquentRepositoryAdapter implements RepositoryAdapterInterface
 
     public function find(string $resource, string $id): ?array
     {
-        $m = $this->query($resource)->find($id);
+        $builder = $this->query($resource);
+        $res = $this->registry->getResource($resource);
+
+        [$builder] = $this->applyComputedFields($builder, $res);
+
+        $m = $builder->find($id);
 
         /** @var array<string, mixed>|null */
         return $m?->toArray();
@@ -109,31 +104,60 @@ final class EloquentRepositoryAdapter implements RepositoryAdapterInterface
     /** @param array<string, mixed> $attributes */
     public function create(string $resource, array $attributes): array
     {
-        $modelClass = $this->model($resource);
-        /** @var Model $m */
-        $m = new $modelClass();
-        $m->fill($attributes);
-        $m->save();
-
         /** @var array<string, mixed> */
-        return $m->toArray();
+        return DB::transaction(function () use ($resource, $attributes): array {
+            $modelClass = $this->model($resource);
+            /** @var Model $m */
+            $m = new $modelClass();
+            $m->fill($attributes);
+            $m->save();
+
+            /** @var array<string, mixed> */
+            return $m->toArray();
+        });
     }
 
     /** @param array<string, mixed> $attributes */
     public function update(string $resource, string|int $id, array $attributes): array
     {
-        /** @var Model $m */
-        $m = $this->model($resource)::query()->findOrFail($id);
-        $m->fill($attributes);
-        $m->save();
-
         /** @var array<string, mixed> */
-        return $m->toArray();
+        return DB::transaction(function () use ($resource, $id, $attributes): array {
+            /** @var Model $m */
+            $m = $this->model($resource)::query()->findOrFail($id);
+            $m->fill($attributes);
+            $m->save();
+
+            /** @var array<string, mixed> */
+            return $m->toArray();
+        });
     }
 
     public function delete(string $resource, string|int $id): void
     {
-        $this->model($resource)::query()->whereKey($id)->delete();
+        DB::transaction(function () use ($resource, $id): void {
+            $this->model($resource)::query()->whereKey($id)->delete();
+        });
+    }
+
+    /**
+     * @param  Builder<Model>                                                       $builder
+     * @return array{0: Builder<Model>, 1: array<string, EloquentComputedResolver>}
+     */
+    private function applyComputedFields(Builder $builder, ?ResourceDefinitionInterface $res): array
+    {
+        /** @var array<string, EloquentComputedResolver> $resolverMap */
+        $resolverMap = [];
+        if ($res !== null) {
+            foreach ($res->getComputedFields() as $computed) {
+                $resolver = $this->resolveComputed($computed);
+                if ($resolver !== null) {
+                    $resolverMap[$computed->getName()] = $resolver;
+                    $builder = $resolver->apply($builder);
+                }
+            }
+        }
+
+        return [$builder, $resolverMap];
     }
 
     /** @return Builder<Model> */

@@ -72,12 +72,35 @@ final class GenericControllerTest extends TestCase
     }
 
     #[Test]
-    public function index_non_filterable_field_is_ignored(): void
+    public function index_unknown_filter_returns_422(): void
     {
         TestProduct::create(['name' => 'Phone', 'price' => 999, 'category_id' => $this->categoryId]);
 
         // 'id' is not in the filterable list
         $response = $this->getJson('/api/v1/product?filter[id]=1');
+
+        $response->assertStatus(422)
+            ->assertJsonStructure(['message', 'errors' => ['filter']]);
+    }
+
+    #[Test]
+    public function index_unknown_sort_returns_422(): void
+    {
+        TestProduct::create(['name' => 'Phone', 'price' => 999, 'category_id' => $this->categoryId]);
+
+        $response = $this->getJson('/api/v1/product?sort=nonexistent');
+
+        $response->assertStatus(422)
+            ->assertJsonStructure(['message', 'errors' => ['sort']]);
+    }
+
+    #[Test]
+    public function index_valid_filters_still_work(): void
+    {
+        TestProduct::create(['name' => 'Phone', 'price' => 999, 'category_id' => $this->categoryId]);
+        TestProduct::create(['name' => 'Tablet', 'price' => 499, 'category_id' => $this->categoryId]);
+
+        $response = $this->getJson('/api/v1/product?filter[name]=Phone');
 
         $response->assertOk()
             ->assertJsonCount(1, 'data');

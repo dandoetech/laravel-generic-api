@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace DanDoeTech\LaravelGenericApi\Tests\Fixtures;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * @property int    $id
@@ -21,4 +22,10 @@ final class TestProduct extends Model
     protected $guarded = [];
 
     public $timestamps = true;
+
+    /** @return BelongsTo<TestCategory, $this> */
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(TestCategory::class, 'category_id');
+    }
 }
