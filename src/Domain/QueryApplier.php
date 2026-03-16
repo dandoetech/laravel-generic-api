@@ -143,9 +143,14 @@ final class QueryApplier
      * @param  Builder<Model> $builder
      * @return Builder<Model>
      */
+    /**
+     * @param  Builder<Model> $builder
+     * @return Builder<Model>
+     */
     private function applyRegularFilter(Builder $builder, string $field, string $op, mixed $value): Builder
     {
-        match ($op) {
+        /** @var Builder<Model> */
+        return match ($op) {
             'eq'      => $builder->where($field, $value),
             'neq'     => $builder->where($field, '!=', $value),
             'gt'      => $builder->where($field, '>', $value),
@@ -156,8 +161,6 @@ final class QueryApplier
             'between' => $builder->whereBetween($field, \array_map('\trim', \explode(',', \is_string($value) ? $value : ''))),
             default   => $builder->where($field, $value),
         };
-
-        return $builder;
     }
 
     private function sqlOperator(string $op): string
