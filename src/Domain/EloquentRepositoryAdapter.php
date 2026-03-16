@@ -28,10 +28,11 @@ final class EloquentRepositoryAdapter implements RepositoryAdapterInterface
         $builder = $this->query($resource);
         $res = $this->registry->getResource($resource);
 
+        /** @var array{filters?: list<array{field: string, operator: string, value: mixed}>, sort?: list<array{0: string, 1: string}>, search?: string|null, page?: int, perPage?: int} $criteria */
         $builder = $this->queryApplier->apply($builder, $res, $criteria);
 
-        $perPage = (int) ($criteria['perPage'] ?? 25);
-        $page = (int) ($criteria['page'] ?? 1);
+        $perPage = isset($criteria['perPage']) ? (int) $criteria['perPage'] : 25;
+        $page = isset($criteria['page']) ? (int) $criteria['page'] : 1;
 
         $p = $builder->paginate($perPage, ['*'], 'page', $page);
 

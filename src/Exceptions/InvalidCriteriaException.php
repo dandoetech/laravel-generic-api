@@ -8,17 +8,21 @@ use RuntimeException;
 
 final class InvalidCriteriaException extends RuntimeException
 {
+    private const ALLOWED_OPERATORS = ['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'like', 'between'];
+
     /**
      * @param list<string> $unknownFilters
      * @param list<string> $unknownSorts
      * @param list<string> $allowedFilters
      * @param list<string> $allowedSorts
+     * @param list<string> $unknownOperators
      */
     public function __construct(
         public readonly array $unknownFilters = [],
         public readonly array $unknownSorts = [],
         public readonly array $allowedFilters = [],
         public readonly array $allowedSorts = [],
+        public readonly array $unknownOperators = [],
     ) {
         $parts = [];
         if ($this->unknownFilters !== []) {
@@ -26,6 +30,9 @@ final class InvalidCriteriaException extends RuntimeException
         }
         if ($this->unknownSorts !== []) {
             $parts[] = 'Unknown sort fields: ' . \implode(', ', $this->unknownSorts);
+        }
+        if ($this->unknownOperators !== []) {
+            $parts[] = 'Unknown operators: ' . \implode(', ', $this->unknownOperators);
         }
 
         parent::__construct(\implode('. ', $parts));
@@ -47,6 +54,12 @@ final class InvalidCriteriaException extends RuntimeException
             $errors['sort'] = [
                 'Unknown sort fields: ' . \implode(', ', $this->unknownSorts)
                 . '. Allowed: ' . \implode(', ', $this->allowedSorts),
+            ];
+        }
+        if ($this->unknownOperators !== []) {
+            $errors['operator'] = [
+                'Unknown operators: ' . \implode(', ', $this->unknownOperators)
+                . '. Allowed: ' . \implode(', ', self::ALLOWED_OPERATORS),
             ];
         }
 

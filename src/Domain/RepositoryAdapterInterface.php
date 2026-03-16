@@ -7,12 +7,7 @@ namespace DanDoeTech\LaravelGenericApi\Domain;
 interface RepositoryAdapterInterface
 {
     /**
-     * @param array{
-     *     filters?: array<string, mixed>,
-     *     sort?: list<array{0: string, 1: 'asc'|'desc'}>,
-     *     page?: int,
-     *     perPage?: int,
-     * } $criteria
+     * @param  array<string, mixed>                                                $criteria
      * @return array{data: list<array<string, mixed>>, meta: array<string, mixed>}
      */
     public function paginate(string $resource, array $criteria): array;

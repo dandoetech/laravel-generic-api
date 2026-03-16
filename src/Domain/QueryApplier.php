@@ -24,18 +24,25 @@ final class QueryApplier
     /**
      * Apply computed fields, filters, sorts, and search to a query builder.
      *
-     * @param  Builder<Model>                                                                                        $builder
-     * @param  ResourceDefinitionInterface|null                                                                      $resource
-     * @param  array{filters?: array<string, mixed>, sort?: list<array{0: string, 1: string}>, search?: string|null} $criteria
+     * @param  Builder<Model>                   $builder
+     * @param  ResourceDefinitionInterface|null $resource
+     * @param  array<string, mixed>             $criteria
      * @return Builder<Model>
      */
     public function apply(Builder $builder, ?ResourceDefinitionInterface $resource, array $criteria): Builder
     {
         [$builder, $resolverMap] = $this->applyComputedFields($builder, $resource);
 
-        $builder = $this->applyFilters($builder, $resource, $resolverMap, $criteria['filters'] ?? []);
-        $builder = $this->applySearch($builder, $resource, $resolverMap, $criteria['search'] ?? null);
-        $builder = $this->applySorts($builder, $resolverMap, $criteria['sort'] ?? []);
+        /** @var list<array{field: string, operator: string, value: mixed}> $filters */
+        $filters = $criteria['filters'] ?? [];
+        /** @var string|null $search */
+        $search = $criteria['search'] ?? null;
+        /** @var list<array{0: string, 1: string}> $sorts */
+        $sorts = $criteria['sort'] ?? [];
+
+        $builder = $this->applyFilters($builder, $resource, $resolverMap, $filters);
+        $builder = $this->applySearch($builder, $resource, $resolverMap, $search);
+        $builder = $this->applySorts($builder, $resolverMap, $sorts);
 
         return $builder;
     }
@@ -75,31 +82,95 @@ final class QueryApplier
     }
 
     /**
-     * @param  Builder<Model>                          $builder
-     * @param  array<string, EloquentComputedResolver> $resolverMap
-     * @param  array<string, mixed>                    $filters
+     * @param  Builder<Model>                                                                  $builder
+     * @param  array<string, EloquentComputedResolver>                                         $resolverMap
+     * @param  list<array{field: string, operator: string, value: mixed}>|array<string, mixed> $filters
      * @return Builder<Model>
      */
     private function applyFilters(Builder $builder, ?ResourceDefinitionInterface $res, array $resolverMap, array $filters): Builder
     {
-        $stringFields = $this->getStringFieldNames($res);
-        $stringComputedFields = $this->getStringComputedFieldNames($res);
+        foreach ($filters as $filter) {
+            if (!\is_array($filter) || !isset($filter['field'], $filter['operator'], $filter['value'])) {
+                continue;
+            }
 
-        foreach ($filters as $field => $value) {
+            /** @var string $field */
+            $field = $filter['field'];
+            /** @var string $op */
+            $op = $filter['operator'];
+            $value = $filter['value'];
+
             if (isset($resolverMap[$field])) {
-                if (\in_array($field, $stringComputedFields, true)) {
-                    $builder = $resolverMap[$field]->filter($builder, '%' . $value . '%', 'LIKE');
-                } else {
-                    $builder = $resolverMap[$field]->filter($builder, $value);
-                }
-            } elseif (\in_array($field, $stringFields, true)) {
-                $builder->where($field, 'LIKE', '%' . $value . '%');
+                $builder = $this->applyComputedFilter($builder, $resolverMap[$field], $op, $value);
             } else {
-                $builder->where($field, $value);
+                $builder = $this->applyRegularFilter($builder, $field, $op, $value);
             }
         }
 
         return $builder;
+    }
+
+    /**
+     * @param  Builder<Model> $builder
+     * @return Builder<Model>
+     */
+    private function applyComputedFilter(Builder $builder, EloquentComputedResolver $resolver, string $op, mixed $value): Builder
+    {
+        return match ($op) {
+            'like'    => $resolver->filter($builder, '%' . $value . '%', 'LIKE'),
+            'between' => $this->applyComputedBetween($builder, $resolver, $value),
+            default   => $resolver->filter($builder, $value, $this->sqlOperator($op)),
+        };
+    }
+
+    /**
+     * @param  Builder<Model> $builder
+     * @return Builder<Model>
+     */
+    private function applyComputedBetween(Builder $builder, EloquentComputedResolver $resolver, mixed $value): Builder
+    {
+        $str = \is_string($value) ? $value : '';
+        $parts = \explode(',', $str);
+        if (\count($parts) === 2) {
+            $builder = $resolver->filter($builder, \trim($parts[0]), '>=');
+            $builder = $resolver->filter($builder, \trim($parts[1]), '<=');
+        }
+
+        return $builder;
+    }
+
+    /**
+     * @param  Builder<Model> $builder
+     * @return Builder<Model>
+     */
+    private function applyRegularFilter(Builder $builder, string $field, string $op, mixed $value): Builder
+    {
+        match ($op) {
+            'eq'      => $builder->where($field, $value),
+            'neq'     => $builder->where($field, '!=', $value),
+            'gt'      => $builder->where($field, '>', $value),
+            'gte'     => $builder->where($field, '>=', $value),
+            'lt'      => $builder->where($field, '<', $value),
+            'lte'     => $builder->where($field, '<=', $value),
+            'like'    => $builder->where($field, 'LIKE', '%' . $value . '%'),
+            'between' => $builder->whereBetween($field, \array_map('\trim', \explode(',', \is_string($value) ? $value : ''))),
+            default   => $builder->where($field, $value),
+        };
+
+        return $builder;
+    }
+
+    private function sqlOperator(string $op): string
+    {
+        return match ($op) {
+            'eq'    => '=',
+            'neq'   => '!=',
+            'gt'    => '>',
+            'gte'   => '>=',
+            'lt'    => '<',
+            'lte'   => '<=',
+            default => '=',
+        };
     }
 
     /**

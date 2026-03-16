@@ -50,8 +50,10 @@ final class GenericController extends Controller
         /** @var array<string, mixed> $query */
         $query = $request->query();
 
+        $stringFields = RegistryUtils::stringFieldNames($res);
+
         try {
-            $criteria = QueryCriteria::from($query, $filterable, $sortable, $perDefault, $perMax);
+            $criteria = QueryCriteria::from($query, $filterable, $sortable, $perDefault, $perMax, $stringFields);
         } catch (InvalidCriteriaException $e) {
             return response()->json([
                 'message' => $e->getMessage(),

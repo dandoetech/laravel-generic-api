@@ -64,7 +64,7 @@ final class EloquentRepositoryAdapterTest extends TestCase
         TestProduct::create(['name' => 'Tablet', 'price' => 499, 'category_id' => $this->categoryId]);
 
         $result = $this->repo->paginate('product', [
-            'filters' => ['name' => 'Phone'],
+            'filters' => [['field' => 'name', 'operator' => 'like', 'value' => 'Phone']],
             'sort'    => [],
             'page'    => 1,
             'perPage' => 25,

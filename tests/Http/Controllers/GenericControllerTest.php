@@ -107,6 +107,111 @@ final class GenericControllerTest extends TestCase
     }
 
     #[Test]
+    public function index_unknown_operator_returns_422(): void
+    {
+        $response = $this->getJson('/api/v1/product?filter[price][foo]=10');
+
+        $response->assertStatus(422)
+            ->assertJsonStructure(['message', 'errors' => ['operator']]);
+    }
+
+    // --- FILTER OPERATORS ---
+
+    #[Test]
+    public function index_filter_gte_operator(): void
+    {
+        TestProduct::create(['name' => 'Cheap', 'price' => 50, 'category_id' => $this->categoryId]);
+        TestProduct::create(['name' => 'Mid', 'price' => 100, 'category_id' => $this->categoryId]);
+        TestProduct::create(['name' => 'Expensive', 'price' => 200, 'category_id' => $this->categoryId]);
+
+        $response = $this->getJson('/api/v1/product?filter[price][gte]=100');
+
+        $response->assertOk()
+            ->assertJsonCount(2, 'data');
+    }
+
+    #[Test]
+    public function index_filter_lte_operator(): void
+    {
+        TestProduct::create(['name' => 'Cheap', 'price' => 50, 'category_id' => $this->categoryId]);
+        TestProduct::create(['name' => 'Expensive', 'price' => 200, 'category_id' => $this->categoryId]);
+
+        $response = $this->getJson('/api/v1/product?filter[price][lte]=100');
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data');
+        $this->assertEquals('Cheap', $response->json('data.0.name'));
+    }
+
+    #[Test]
+    public function index_filter_between_operator(): void
+    {
+        TestProduct::create(['name' => 'Cheap', 'price' => 10, 'category_id' => $this->categoryId]);
+        TestProduct::create(['name' => 'Mid', 'price' => 50, 'category_id' => $this->categoryId]);
+        TestProduct::create(['name' => 'Expensive', 'price' => 200, 'category_id' => $this->categoryId]);
+
+        $response = $this->getJson('/api/v1/product?filter[price][between]=20,100');
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data');
+        $this->assertEquals('Mid', $response->json('data.0.name'));
+    }
+
+    #[Test]
+    public function index_filter_neq_operator(): void
+    {
+        TestProduct::create(['name' => 'Phone', 'price' => 100, 'category_id' => $this->categoryId]);
+        TestProduct::create(['name' => 'Tablet', 'price' => 200, 'category_id' => $this->categoryId]);
+
+        $response = $this->getJson('/api/v1/product?filter[price][neq]=100');
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data');
+        $this->assertEquals('Tablet', $response->json('data.0.name'));
+    }
+
+    #[Test]
+    public function index_filter_like_explicit(): void
+    {
+        TestProduct::create(['name' => 'Widget Pro', 'price' => 100, 'category_id' => $this->categoryId]);
+        TestProduct::create(['name' => 'Phone', 'price' => 200, 'category_id' => $this->categoryId]);
+
+        $response = $this->getJson('/api/v1/product?filter[name][like]=Wid');
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data');
+        $this->assertEquals('Widget Pro', $response->json('data.0.name'));
+    }
+
+    #[Test]
+    public function index_filter_legacy_format_still_works(): void
+    {
+        TestProduct::create(['name' => 'Widget Pro', 'price' => 100, 'category_id' => $this->categoryId]);
+        TestProduct::create(['name' => 'Phone', 'price' => 200, 'category_id' => $this->categoryId]);
+
+        // Legacy format: filter[name]=Widget → auto LIKE for string fields
+        $response = $this->getJson('/api/v1/product?filter[name]=Widget');
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data');
+        $this->assertEquals('Widget Pro', $response->json('data.0.name'));
+    }
+
+    #[Test]
+    public function index_filter_multiple_operators_same_field(): void
+    {
+        TestProduct::create(['name' => 'Cheap', 'price' => 10, 'category_id' => $this->categoryId]);
+        TestProduct::create(['name' => 'Mid', 'price' => 50, 'category_id' => $this->categoryId]);
+        TestProduct::create(['name' => 'Expensive', 'price' => 200, 'category_id' => $this->categoryId]);
+
+        $response = $this->getJson('/api/v1/product?filter[price][gte]=20&filter[price][lte]=100');
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data');
+        $this->assertEquals('Mid', $response->json('data.0.name'));
+    }
+
+    #[Test]
     public function index_sortable_fields_work(): void
     {
         TestProduct::create(['name' => 'Banana Phone', 'price' => 100, 'category_id' => $this->categoryId]);
