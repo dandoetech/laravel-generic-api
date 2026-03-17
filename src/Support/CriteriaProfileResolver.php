@@ -26,8 +26,8 @@ final class CriteriaProfileResolver
         $cfg = $profiles[$profile];
 
         return [
-            'filterable' => \array_values($cfg['filterable'] ?? []),
-            'sortable'   => \array_values($cfg['sortable'] ?? []),
+            'filterable' => $cfg['filterable'] ?? [],
+            'sortable'   => $cfg['sortable'] ?? [],
         ];
     }
 }

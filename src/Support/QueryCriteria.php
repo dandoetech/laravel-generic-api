@@ -80,7 +80,7 @@ final class QueryCriteria
 
         if ($unknownOperators !== []) {
             throw new InvalidCriteriaException(
-                unknownOperators: \array_unique($unknownOperators),
+                unknownOperators: \array_values(\array_unique($unknownOperators)),
             );
         }
 

@@ -21,7 +21,7 @@ final class RegistryUtils
     /** @return list<string> */
     public static function fieldNames(ResourceDefinitionInterface $res): array
     {
-        return \array_values(\array_map(fn ($f) => $f->getName(), $res->getFields()));
+        return \array_map(fn ($f) => $f->getName(), $res->getFields());
     }
 
     /**

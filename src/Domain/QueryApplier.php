@@ -117,7 +117,7 @@ final class QueryApplier
     private function applyComputedFilter(Builder $builder, EloquentComputedResolver $resolver, string $op, mixed $value): Builder
     {
         return match ($op) {
-            'like'    => $resolver->filter($builder, '%' . $value . '%', 'LIKE'),
+            'like'    => $resolver->filter($builder, '%' . (\is_string($value) ? $value : '') . '%', 'LIKE'),
             'between' => $this->applyComputedBetween($builder, $resolver, $value),
             default   => $resolver->filter($builder, $value, $this->sqlOperator($op)),
         };
@@ -157,7 +157,7 @@ final class QueryApplier
             'gte'     => $builder->where($field, '>=', $value),
             'lt'      => $builder->where($field, '<', $value),
             'lte'     => $builder->where($field, '<=', $value),
-            'like'    => $builder->where($field, 'LIKE', '%' . $value . '%'),
+            'like'    => $builder->where($field, 'LIKE', '%' . (\is_string($value) ? $value : '') . '%'),
             'between' => $builder->whereBetween($field, \array_map('\trim', \explode(',', \is_string($value) ? $value : ''))),
             default   => $builder->where($field, $value),
         };

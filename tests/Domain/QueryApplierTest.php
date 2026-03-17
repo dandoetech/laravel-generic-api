@@ -44,10 +44,11 @@ final class QueryApplierTest extends TestCase
         $builder = TestProduct::query();
         $builder = $this->applier->applyComputedFieldsOnly($builder, $res);
 
-        /** @var array<string, mixed> $result */
-        $result = $builder->first()?->toArray();
+        $model = $builder->first();
+        $this->assertNotNull($model);
 
-        $this->assertNotNull($result);
+        /** @var array<string, mixed> $result */
+        $result = $model->toArray();
         $this->assertArrayHasKey('category_name', $result);
         $this->assertEquals('Electronics', $result['category_name']);
     }
