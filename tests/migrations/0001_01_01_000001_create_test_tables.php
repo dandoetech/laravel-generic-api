@@ -23,10 +23,26 @@ return new class () extends Migration {
 
             $table->foreign('category_id')->references('id')->on('categories');
         });
+
+        Schema::create('users', function (Blueprint $table): void {
+            $table->id();
+            $table->string('name');
+            $table->string('email')->unique();
+        });
+
+        Schema::create('notes', function (Blueprint $table): void {
+            $table->id();
+            $table->string('title');
+            $table->unsignedBigInteger('user_id');
+
+            $table->foreign('user_id')->references('id')->on('users');
+        });
     }
 
     public function down(): void
     {
+        Schema::dropIfExists('notes');
+        Schema::dropIfExists('users');
         Schema::dropIfExists('products');
         Schema::dropIfExists('categories');
     }

@@ -31,8 +31,9 @@ final class GenericController extends Controller
     ) {
     }
 
-    public function index(Request $request, string $resource): JsonResponse
+    public function index(Request $request): JsonResponse
     {
+        $resource = $this->resourceKey($request);
         $res = $this->resolve($resource);
 
         // Criteria profile override (only when ?profile= is present and profile exists)
@@ -66,8 +67,9 @@ final class GenericController extends Controller
         return response()->json(ResourceJson::collection($out['data'], $out['meta']));
     }
 
-    public function show(string $resource, string $id): JsonResponse
+    public function show(Request $request, string $id): JsonResponse
     {
+        $resource = $this->resourceKey($request);
         $this->resolve($resource);
 
         $item = $this->repo->find($resource, $id);
@@ -77,8 +79,9 @@ final class GenericController extends Controller
         return response()->json(ResourceJson::item($item));
     }
 
-    public function store(StoreRequest $request, string $resource): JsonResponse
+    public function store(StoreRequest $request): JsonResponse
     {
+        $resource = $this->resourceKey($request);
         $res = $this->resolve($resource);
 
         $allowed = RegistryUtils::fieldNames($res);
@@ -92,8 +95,9 @@ final class GenericController extends Controller
         return response()->json(ResourceJson::item($created), 201);
     }
 
-    public function update(UpdateRequest $request, string $resource, string $id): JsonResponse
+    public function update(UpdateRequest $request, string $id): JsonResponse
     {
+        $resource = $this->resourceKey($request);
         $res = $this->resolve($resource);
 
         $allowed = RegistryUtils::fieldNames($res);
@@ -107,8 +111,9 @@ final class GenericController extends Controller
         return response()->json(ResourceJson::item($updated));
     }
 
-    public function destroy(string $resource, string $id): Response
+    public function destroy(Request $request, string $id): Response
     {
+        $resource = $this->resourceKey($request);
         $this->resolve($resource);
 
         $this->repo->delete($resource, $id);
@@ -116,12 +121,13 @@ final class GenericController extends Controller
         return response()->noContent();
     }
 
-    public function action(ActionRequest $request, string $resource, string $action): JsonResponse
+    public function action(ActionRequest $request, string $action): JsonResponse
     {
         if ($this->actions === null) {
             abort(404, 'Mass actions are not configured');
         }
 
+        $resource = $this->resourceKey($request);
         $this->resolve($resource);
 
         /** @var list<string|int> $ids */
@@ -140,6 +146,17 @@ final class GenericController extends Controller
         );
 
         return response()->json(['data' => $result]);
+    }
+
+    /**
+     * Extract the resource key from route defaults.
+     */
+    private function resourceKey(Request $request): string
+    {
+        /** @var string $key */
+        $key = $request->route('resource', '');
+
+        return $key;
     }
 
     /**

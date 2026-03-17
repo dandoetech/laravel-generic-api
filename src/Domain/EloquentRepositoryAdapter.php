@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace DanDoeTech\LaravelGenericApi\Domain;
 
 use DanDoeTech\LaravelResourceRegistry\Contracts\HasEloquentModel;
+use DanDoeTech\LaravelResourceRegistry\Contracts\HasOwnerScope;
 use DanDoeTech\LaravelResourceRegistry\Contracts\HasScope;
 use DanDoeTech\ResourceRegistry\Registry\Registry;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -114,7 +115,17 @@ final class EloquentRepositoryAdapter implements RepositoryAdapterInterface
         $res = $this->resolveResource($resource);
         $builder = $res->model()::query();
 
-        if ($res instanceof HasScope) {
+        if ($res instanceof HasOwnerScope) {
+            /** @var \Illuminate\Contracts\Auth\Guard $guard */
+            $guard = $this->container->make('auth');
+            /** @var Authenticatable|null $user */
+            $user = $guard->user();
+            if ($user !== null) {
+                $builder->where($res->ownerKey(), $user->getAuthIdentifier());
+            } else {
+                $builder->whereRaw('1 = 0');
+            }
+        } elseif ($res instanceof HasScope) {
             $scope = $res->scope();
             if ($scope !== null) {
                 /** @var \Illuminate\Contracts\Auth\Guard $guard */
