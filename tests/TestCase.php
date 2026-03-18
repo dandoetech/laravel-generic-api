@@ -7,6 +7,7 @@ namespace DanDoeTech\LaravelGenericApi\Tests;
 use DanDoeTech\LaravelGenericApi\Providers\GenericApiServiceProvider;
 use DanDoeTech\LaravelGenericApi\Tests\Fixtures\CategoryResource;
 use DanDoeTech\LaravelGenericApi\Tests\Fixtures\OwnerScopedResource;
+use DanDoeTech\LaravelGenericApi\Tests\Fixtures\OwnerScopedWithPolicyResource;
 use DanDoeTech\LaravelGenericApi\Tests\Fixtures\PolicyWithHasModelResource;
 use DanDoeTech\LaravelGenericApi\Tests\Fixtures\ProductResource;
 use DanDoeTech\ResourceRegistry\Contracts\RegistryDriverInterface;
@@ -67,6 +68,15 @@ abstract class TestCase extends OrchestraTestCase
     protected function registerTestResourcesWithOwnerScope(): void
     {
         $driver = $this->buildDriver(new ProductResource(), new CategoryResource(), new OwnerScopedResource());
+
+        \assert($this->app !== null);
+        $this->app->singleton(Registry::class, static fn () => new Registry($driver));
+        $this->reloadRoutes();
+    }
+
+    protected function registerTestResourcesWithOwnerScopeAndPolicy(): void
+    {
+        $driver = $this->buildDriver(new ProductResource(), new CategoryResource(), new OwnerScopedWithPolicyResource());
 
         \assert($this->app !== null);
         $this->app->singleton(Registry::class, static fn () => new Registry($driver));
