@@ -5,12 +5,17 @@ declare(strict_types=1);
 return [
     'prefix' => env('GENERIC_API_PREFIX', 'api/v1'),
 
+    // Middleware applied to all generic API routes.
+    // The AuthorizeResource middleware is always appended automatically.
+    'middleware' => ['api'],
+
     'pagination' => [
         'per_page' => 25,
         'max_per_page' => 200,
     ],
 
-    // Named profiles you can pick via ?profile=admin (CriteriaProfile)
+    // @deprecated Define query profiles on the Resource class via queryProfile() instead.
+    // Config-based profiles are kept for backwards compatibility only.
     'query_profiles' => [
         // 'product' => [
         //   'default' => [ 'filterable' => ['name'], 'sortable' => ['id'] ],

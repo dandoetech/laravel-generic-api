@@ -8,6 +8,9 @@ namespace DanDoeTech\LaravelGenericApi\Support;
  * Resolves filterable/sortable config for a resource given a profile name.
  *
  * Returns null when no matching profile is found.
+ *
+ * @deprecated Define query profiles on the Resource class via queryProfile() instead.
+ *             This config-based resolver is kept for backwards compatibility only.
  */
 final class CriteriaProfileResolver
 {

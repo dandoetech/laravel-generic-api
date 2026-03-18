@@ -441,4 +441,73 @@ final class GenericControllerTest extends TestCase
             ->assertJsonCount(0, 'data');
         $this->assertEquals(0, $response->json('meta.total'));
     }
+
+    // --- Query Profiles ---
+
+    #[Test]
+    public function index_with_resource_profile_uses_custom_filterable(): void
+    {
+        TestProduct::create(['name' => 'Phone', 'price' => 50, 'category_id' => $this->categoryId]);
+        TestProduct::create(['name' => 'Tablet', 'price' => 50, 'category_id' => $this->categoryId]);
+
+        // The 'cheap' profile restricts filterable to ['name', 'category_id']
+        // Filtering on 'price' (which is NOT in the profile's filterable) should fail
+        $response = $this->getJson('/api/v1/product?profile=cheap&filter[price][eq]=50');
+
+        $response->assertStatus(422);
+    }
+
+    #[Test]
+    public function index_with_resource_profile_applies_pre_filter(): void
+    {
+        TestProduct::create(['name' => 'Cheap Phone', 'price' => 50, 'category_id' => $this->categoryId]);
+        TestProduct::create(['name' => 'Expensive Phone', 'price' => 999, 'category_id' => $this->categoryId]);
+
+        // The 'cheap' profile has preFilter: ['price' => 50]
+        $response = $this->getJson('/api/v1/product?profile=cheap');
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data');
+        $this->assertEquals('Cheap Phone', $response->json('data.0.name'));
+    }
+
+    #[Test]
+    public function index_without_profile_ignores_pre_filter(): void
+    {
+        TestProduct::create(['name' => 'Cheap Phone', 'price' => 50, 'category_id' => $this->categoryId]);
+        TestProduct::create(['name' => 'Expensive Phone', 'price' => 999, 'category_id' => $this->categoryId]);
+
+        // Without ?profile=, no preFilter is applied
+        $response = $this->getJson('/api/v1/product');
+
+        $response->assertOk()
+            ->assertJsonCount(2, 'data');
+    }
+
+    #[Test]
+    public function index_with_unknown_profile_uses_defaults(): void
+    {
+        TestProduct::create(['name' => 'Phone', 'price' => 50, 'category_id' => $this->categoryId]);
+        TestProduct::create(['name' => 'Tablet', 'price' => 100, 'category_id' => $this->categoryId]);
+
+        // Unknown profile name should be ignored, default filterable/sortable used
+        $response = $this->getJson('/api/v1/product?profile=nonexistent');
+
+        $response->assertOk()
+            ->assertJsonCount(2, 'data');
+    }
+
+    #[Test]
+    public function index_with_resource_profile_allows_user_filter_on_profile_filterable(): void
+    {
+        TestProduct::create(['name' => 'Cheap Phone', 'price' => 50, 'category_id' => $this->categoryId]);
+        TestProduct::create(['name' => 'Cheap Tablet', 'price' => 50, 'category_id' => $this->categoryId]);
+
+        // The 'cheap' profile allows filtering on 'name' and has preFilter price=50
+        $response = $this->getJson('/api/v1/product?profile=cheap&filter[name]=Phone');
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data');
+        $this->assertEquals('Cheap Phone', $response->json('data.0.name'));
+    }
 }

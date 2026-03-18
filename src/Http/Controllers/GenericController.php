@@ -16,6 +16,7 @@ use DanDoeTech\LaravelGenericApi\Support\CriteriaProfileResolver;
 use DanDoeTech\LaravelGenericApi\Support\QueryCriteria;
 use DanDoeTech\LaravelGenericApi\Support\RegistryUtils;
 use DanDoeTech\ResourceRegistry\Contracts\ResourceDefinitionInterface;
+use DanDoeTech\ResourceRegistry\Definition\QueryProfile;
 use DanDoeTech\ResourceRegistry\Registry\Registry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -36,12 +37,12 @@ final class GenericController extends Controller
         $resource = $this->resourceKey($request);
         $res = $this->resolve($resource);
 
-        // Criteria profile override (only when ?profile= is present and profile exists)
-        $profile = $request->query('profile');
-        $resolved = \is_string($profile) ? CriteriaProfileResolver::resolve($resource, $profile) : null;
+        $queryProfile = $this->resolveQueryProfile($resource, $res, $request);
 
-        $filterable = $resolved['filterable'] ?? ($res->getFilterable() ?: RegistryUtils::fieldNames($res));
-        $sortable = $resolved['sortable'] ?? ($res->getSortable() ?: ['id', 'created_at']);
+        $defaultFilterable = $res->getFilterable() ?: RegistryUtils::fieldNames($res);
+        $defaultSortable = $res->getSortable() ?: ['id', 'created_at'];
+        $filterable = ($queryProfile !== null && $queryProfile->filterable !== null) ? $queryProfile->filterable : $defaultFilterable;
+        $sortable = ($queryProfile !== null && $queryProfile->sortable !== null) ? $queryProfile->sortable : $defaultSortable;
 
         /** @var int $perDefault */
         $perDefault = config('ddt_api.pagination.per_page', 25);
@@ -60,6 +61,15 @@ final class GenericController extends Controller
                 'message' => $e->getMessage(),
                 'errors'  => $e->toErrors(),
             ], 422);
+        }
+
+        // Apply preFilter from query profile as additional WHERE conditions
+        if ($queryProfile !== null && $queryProfile->preFilter !== []) {
+            $preFilters = [];
+            foreach ($queryProfile->preFilter as $field => $value) {
+                $preFilters[] = ['field' => $field, 'operator' => 'eq', 'value' => $value];
+            }
+            $criteria['filters'] = \array_merge($preFilters, $criteria['filters']);
         }
 
         $out = $this->repo->paginate($resource, $criteria);
@@ -157,6 +167,34 @@ final class GenericController extends Controller
         $key = $request->route('resource', '');
 
         return $key;
+    }
+
+    /**
+     * Resolve query profile: first from Resource class, then config fallback (deprecated).
+     */
+    private function resolveQueryProfile(string $resource, ResourceDefinitionInterface $res, Request $request): ?QueryProfile
+    {
+        $profile = $request->query('profile');
+        if (!\is_string($profile) || $profile === '') {
+            return null;
+        }
+
+        // 1. Try Resource class
+        $resourceProfiles = $res->getQueryProfiles();
+        if (isset($resourceProfiles[$profile])) {
+            return $resourceProfiles[$profile];
+        }
+
+        // 2. Fallback: Config-based profiles (deprecated)
+        $resolved = CriteriaProfileResolver::resolve($resource, $profile);
+        if ($resolved !== null) {
+            return new QueryProfile(
+                filterable: $resolved['filterable'],
+                sortable: $resolved['sortable'],
+            );
+        }
+
+        return null;
     }
 
     /**

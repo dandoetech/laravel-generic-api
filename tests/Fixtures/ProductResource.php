@@ -38,6 +38,8 @@ final class ProductResource extends Resource implements HasEloquentModel, HasPol
             ->searchable(['name'])
             ->action('create')
             ->action('update')
-            ->action('delete');
+            ->action('delete')
+            ->queryProfile('cheap', filterable: ['name', 'category_id'], preFilter: ['price' => 50])
+            ->queryProfile('electronics', preFilter: ['category_id' => 1]);
     }
 }
