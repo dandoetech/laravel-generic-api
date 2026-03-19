@@ -5,8 +5,9 @@ declare(strict_types=1);
 return [
     'prefix' => env('GENERIC_API_PREFIX', 'api/v1'),
 
-    // Middleware applied to all generic API routes.
-    // The AuthorizeResource middleware is always appended automatically.
+    // Default middleware applied to all generic API routes.
+    // Override per resource via ->meta(['middleware' => ['auth:sanctum']]).
+    // AuthorizeResource is always appended automatically.
     'middleware' => ['api'],
 
     'pagination' => [
