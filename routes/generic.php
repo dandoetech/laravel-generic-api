@@ -9,6 +9,10 @@ use Illuminate\Support\Facades\Route;
 
 $prefix = config('ddt_api.prefix', 'api');
 
+/** @var list<string> $middleware */
+$middleware = config('ddt_api.middleware', ['api']);
+$middleware[] = AuthorizeResource::class;
+
 /** @var Registry|null $registry */
 $registry = app()->bound(Registry::class) ? app(Registry::class) : null;
 
@@ -17,7 +21,7 @@ if ($registry === null) {
 }
 
 Route::prefix($prefix)
-    ->middleware(['api', AuthorizeResource::class])
+    ->middleware($middleware)
     ->group(function () use ($registry): void {
         foreach ($registry->all() as $resource) {
             $segment = $resource->getRouteSegment() ?? $resource->getKey();

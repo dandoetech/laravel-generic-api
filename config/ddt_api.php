@@ -23,8 +23,9 @@ return [
         // ],
     ],
 
-    // Optional per-resource scope (closure or invokable) applied to list/show queries
-    // Signature: fn(Builder $q, ?\Illuminate\Contracts\Auth\Authenticatable $user): Builder
+    // @deprecated Use HasOwnerScope on the Resource class instead.
+    // Config-based scopes are kept for backwards compatibility only.
+    // Will be removed in v1.0.
     'scopes' => [
         // 'product' => App\Queries\ProductScope::class,
     ],
