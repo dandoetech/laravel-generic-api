@@ -92,32 +92,61 @@ Single item:
 }
 ```
 
-## Filtering and Sorting
+## Query Syntax
 
-Only fields listed in `filterable()` and `sortable()` on the resource are accepted. This includes computed fields — filtering and sorting on `category_name` or `orders_count` works out of the box.
+Only fields listed in `filterable()` and `sortable()` on the resource are accepted. Unknown fields return a `422 Unprocessable Entity`. This includes computed fields — filtering and sorting on `category_name` or `orders_count` works out of the box.
+
+### Filtering
 
 ```
-?filter[category_id]=3&filter[category_name]=Electronics
-?sort=-orders_count,name
+?filter[name]=Widget                           String fields: auto LIKE match
+?filter[category_id]=3                         Non-string fields: exact match
+?filter[price][gte]=10&filter[price][lte]=100  Operator syntax
+?filter[price][between]=10,100                 Between shorthand (comma-separated)
+```
+
+**Operators:** `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `like`, `between`
+
+### Sorting
+
+```
+?sort=name              Ascending
+?sort=-price            Descending (prefix with -)
+?sort=-created_at,name  Multiple fields (comma-separated)
+```
+
+### Search
+
+```
+?search=widget          OR LIKE across all searchable() fields
+```
+
+Search applies `LIKE %term%` for string fields and exact match for non-string fields.
+
+### Pagination
+
+```
+?page=2&perPage=50      Default: 25, max: 200 (configurable)
 ```
 
 ### Query Profiles
 
-Override filterable/sortable per context via named profiles:
+Override filterable/sortable/searchable per context. Profiles can be defined on the Resource class:
 
 ```php
-// config/ddt_api.php
-'query_profiles' => [
-    'product' => [
-        'admin' => [
-            'filterable' => ['name', 'price', 'category_id', 'created_at'],
-            'sortable' => ['name', 'price', 'created_at', 'orders_count'],
-        ],
-    ],
-],
+$b->queryProfile('admin',
+    filterable: ['name', 'price', 'category_id', 'created_at'],
+    sortable: ['name', 'price', 'created_at', 'orders_count'],
+);
+
+// With preFilter — automatically applied WHERE conditions:
+$b->queryProfile('active',
+    filterable: ['name', 'price'],
+    preFilter: ['status' => 'active'],
+);
 ```
 
-Activate with `?profile=admin`.
+Activate with `?profile=admin` or `?profile=active`.
 
 ## Authorization
 
