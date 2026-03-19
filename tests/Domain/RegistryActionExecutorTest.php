@@ -99,6 +99,29 @@ final class RegistryActionExecutorTest extends TestCase
     }
 
     #[Test]
+    public function clone_action_uses_builtin_handler_without_explicit_handler(): void
+    {
+        // 'clone' action without a handler class should NOT throw — it's a built-in
+        $registry = $this->buildRegistry('order', [
+            new ActionDefinition(name: 'clone'),
+        ]);
+
+        $executor = new RegistryActionExecutor($registry, new Container());
+
+        // This will throw because CloneActionHandler needs a real model (integration test covers that),
+        // but it should NOT throw "no handler defined" — it should attempt the built-in handler
+        try {
+            $executor->execute(new MassActionRequest('order', 'clone', [1]));
+            self::fail('Expected an exception');
+        } catch (\InvalidArgumentException $e) {
+            // Should NOT be "has no handler defined"
+            self::assertStringNotContainsString('has no handler defined', $e->getMessage());
+            // It will fail because 'order' doesn't implement HasEloquentModel, which is expected
+            self::assertStringContainsString('HasEloquentModel', $e->getMessage());
+        }
+    }
+
+    #[Test]
     public function throws_for_handler_not_implementing_interface(): void
     {
         $badHandler = new class () {

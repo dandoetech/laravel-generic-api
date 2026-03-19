@@ -32,4 +32,9 @@ final class TestProductPolicy
     {
         return false; // deny by default for testing
     }
+
+    public function action(?Authenticatable $user, string $action): bool
+    {
+        return true;
+    }
 }

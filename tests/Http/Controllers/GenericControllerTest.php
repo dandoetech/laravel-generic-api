@@ -510,4 +510,42 @@ final class GenericControllerTest extends TestCase
             ->assertJsonCount(1, 'data');
         $this->assertEquals('Cheap Phone', $response->json('data.0.name'));
     }
+
+    // --- CLONE ACTION ---
+
+    #[Test]
+    public function clone_action_duplicates_record(): void
+    {
+        $product = TestProduct::create(['name' => 'Original', 'price' => 999, 'category_id' => $this->categoryId]);
+
+        $response = $this->postJson('/api/v1/product/actions/clone', [
+            'ids' => [$product->id],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonStructure(['data' => ['cloned' => [['id', 'name', 'price', 'category_id']]]]);
+
+        $cloned = $response->json('data.cloned.0');
+        $this->assertEquals('Original', $cloned['name']);
+        $this->assertEquals(999, (int) $cloned['price']);
+        $this->assertEquals($this->categoryId, $cloned['category_id']);
+        $this->assertNotEquals($product->id, $cloned['id']);
+
+        $this->assertDatabaseCount('products', 2);
+    }
+
+    #[Test]
+    public function clone_action_duplicates_multiple_records(): void
+    {
+        $p1 = TestProduct::create(['name' => 'Phone', 'price' => 100, 'category_id' => $this->categoryId]);
+        $p2 = TestProduct::create(['name' => 'Tablet', 'price' => 200, 'category_id' => $this->categoryId]);
+
+        $response = $this->postJson('/api/v1/product/actions/clone', [
+            'ids' => [$p1->id, $p2->id],
+        ]);
+
+        $response->assertOk();
+        $this->assertCount(2, $response->json('data.cloned'));
+        $this->assertDatabaseCount('products', 4);
+    }
 }

@@ -46,6 +46,12 @@ final class RegistryActionExecutor implements MassActionExecutorInterface
 
         $handlerClass = $actionDef->getHandler();
         if ($handlerClass === null) {
+            // Check for built-in actions before throwing
+            $builtinHandler = $this->resolveBuiltinHandler($request->action);
+            if ($builtinHandler !== null) {
+                return $builtinHandler->handle($request->resource, $request->ids, $request->payload, $user);
+            }
+
             throw new \InvalidArgumentException(
                 "Action '{$request->action}' on resource '{$request->resource}' has no handler defined",
             );
@@ -60,5 +66,17 @@ final class RegistryActionExecutor implements MassActionExecutorInterface
         }
 
         return $handler->handle($request->resource, $request->ids, $request->payload, $user);
+    }
+
+    /**
+     * Resolve a built-in action handler by name.
+     * Built-in actions (e.g., 'clone') don't require a custom handler class on the action definition.
+     */
+    private function resolveBuiltinHandler(string $action): ?ActionHandlerInterface
+    {
+        return match ($action) {
+            'clone' => new CloneActionHandler($this->registry),
+            default => null,
+        };
     }
 }
