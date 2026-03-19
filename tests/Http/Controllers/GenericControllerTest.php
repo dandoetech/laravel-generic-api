@@ -525,6 +525,7 @@ final class GenericControllerTest extends TestCase
         $response->assertOk()
             ->assertJsonStructure(['data' => ['cloned' => [['id', 'name', 'price', 'category_id']]]]);
 
+        /** @var array{name: string, price: float, category_id: int, id: int} $cloned */
         $cloned = $response->json('data.cloned.0');
         $this->assertEquals('Original', $cloned['name']);
         $this->assertEquals(999, (int) $cloned['price']);
@@ -545,7 +546,9 @@ final class GenericControllerTest extends TestCase
         ]);
 
         $response->assertOk();
-        $this->assertCount(2, $response->json('data.cloned'));
+        /** @var list<array<string, mixed>> $clonedList */
+        $clonedList = $response->json('data.cloned');
+        $this->assertCount(2, $clonedList);
         $this->assertDatabaseCount('products', 4);
     }
 }
