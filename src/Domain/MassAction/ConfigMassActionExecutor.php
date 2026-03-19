@@ -7,6 +7,10 @@ namespace DanDoeTech\LaravelGenericApi\Domain\MassAction;
 use Illuminate\Contracts\Auth\Authenticatable;
 use InvalidArgumentException;
 
+/**
+ * @deprecated Use RegistryActionExecutor instead. Action handlers are now defined
+ *             on the Resource class via ActionDefinition::$handler, not in config arrays.
+ */
 final class ConfigMassActionExecutor implements MassActionExecutorInterface
 {
     public function execute(MassActionRequest $request, ?Authenticatable $user = null): array

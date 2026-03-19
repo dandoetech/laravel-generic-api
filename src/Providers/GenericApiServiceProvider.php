@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace DanDoeTech\LaravelGenericApi\Providers;
 
+use DanDoeTech\LaravelGenericApi\Domain\Actions\RegistryActionExecutor;
 use DanDoeTech\LaravelGenericApi\Domain\EloquentRepositoryAdapter;
-use DanDoeTech\LaravelGenericApi\Domain\MassAction\ConfigMassActionExecutor;
 use DanDoeTech\LaravelGenericApi\Domain\MassAction\MassActionExecutorInterface;
 use DanDoeTech\LaravelGenericApi\Domain\QueryApplier;
 use DanDoeTech\LaravelGenericApi\Domain\RepositoryAdapterInterface;
@@ -37,7 +37,13 @@ final class GenericApiServiceProvider extends ServiceProvider
             ),
         );
 
-        $this->app->bind(MassActionExecutorInterface::class, fn () => new ConfigMassActionExecutor());
+        $this->app->bind(
+            MassActionExecutorInterface::class,
+            static fn (Application $app) => new RegistryActionExecutor(
+                $app->make(Registry::class),
+                $app,
+            ),
+        );
     }
 
     public function boot(): void
