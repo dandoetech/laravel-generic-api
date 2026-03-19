@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace DanDoeTech\LaravelGenericApi\Domain;
 
-use DanDoeTech\LaravelResourceRegistry\Contracts\EloquentComputedResolver;
+use DanDoeTech\LaravelResourceRegistry\Contracts\EloquentComputedResolverInterface;
 use DanDoeTech\LaravelResourceRegistry\Resolvers\ViaResolverFactory;
 use DanDoeTech\ResourceRegistry\Contracts\ComputedFieldDefinitionInterface;
 use DanDoeTech\ResourceRegistry\Contracts\ResourceDefinitionInterface;
@@ -61,12 +61,12 @@ final class QueryApplier
     }
 
     /**
-     * @param  Builder<Model>                                                       $builder
-     * @return array{0: Builder<Model>, 1: array<string, EloquentComputedResolver>}
+     * @param  Builder<Model>                                                                $builder
+     * @return array{0: Builder<Model>, 1: array<string, EloquentComputedResolverInterface>}
      */
     private function applyComputedFields(Builder $builder, ?ResourceDefinitionInterface $res): array
     {
-        /** @var array<string, EloquentComputedResolver> $resolverMap */
+        /** @var array<string, EloquentComputedResolverInterface> $resolverMap */
         $resolverMap = [];
         if ($res !== null) {
             foreach ($res->getComputedFields() as $computed) {
@@ -83,7 +83,7 @@ final class QueryApplier
 
     /**
      * @param  Builder<Model>                                                                  $builder
-     * @param  array<string, EloquentComputedResolver>                                         $resolverMap
+     * @param  array<string, EloquentComputedResolverInterface>                                $resolverMap
      * @param  list<array{field: string, operator: string, value: mixed}>|array<string, mixed> $filters
      * @return Builder<Model>
      */
@@ -114,7 +114,7 @@ final class QueryApplier
      * @param  Builder<Model> $builder
      * @return Builder<Model>
      */
-    private function applyComputedFilter(Builder $builder, EloquentComputedResolver $resolver, string $op, mixed $value): Builder
+    private function applyComputedFilter(Builder $builder, EloquentComputedResolverInterface $resolver, string $op, mixed $value): Builder
     {
         return match ($op) {
             'like'    => $resolver->filter($builder, '%' . (\is_string($value) ? $value : '') . '%', 'LIKE'),
@@ -127,7 +127,7 @@ final class QueryApplier
      * @param  Builder<Model> $builder
      * @return Builder<Model>
      */
-    private function applyComputedBetween(Builder $builder, EloquentComputedResolver $resolver, mixed $value): Builder
+    private function applyComputedBetween(Builder $builder, EloquentComputedResolverInterface $resolver, mixed $value): Builder
     {
         $str = \is_string($value) ? $value : '';
         $parts = \explode(',', $str);
@@ -177,8 +177,8 @@ final class QueryApplier
     }
 
     /**
-     * @param  Builder<Model>                          $builder
-     * @param  array<string, EloquentComputedResolver> $resolverMap
+     * @param  Builder<Model>                                   $builder
+     * @param  array<string, EloquentComputedResolverInterface> $resolverMap
      * @return Builder<Model>
      */
     private function applySearch(Builder $builder, ?ResourceDefinitionInterface $res, array $resolverMap, ?string $search): Builder
@@ -217,9 +217,9 @@ final class QueryApplier
     }
 
     /**
-     * @param  Builder<Model>                          $builder
-     * @param  array<string, EloquentComputedResolver> $resolverMap
-     * @param  list<array{0: string, 1: string}>       $sorts
+     * @param  Builder<Model>                                   $builder
+     * @param  array<string, EloquentComputedResolverInterface> $resolverMap
+     * @param  list<array{0: string, 1: string}>                $sorts
      * @return Builder<Model>
      */
     private function applySorts(Builder $builder, array $resolverMap, array $sorts): Builder
@@ -284,11 +284,11 @@ final class QueryApplier
         ], true);
     }
 
-    private function resolveComputed(ComputedFieldDefinitionInterface $computed): ?EloquentComputedResolver
+    private function resolveComputed(ComputedFieldDefinitionInterface $computed): ?EloquentComputedResolverInterface
     {
         $resolverClass = $computed->getResolver();
         if ($resolverClass !== null) {
-            /** @var EloquentComputedResolver */
+            /** @var EloquentComputedResolverInterface */
             return $this->container->make($resolverClass);
         }
 
