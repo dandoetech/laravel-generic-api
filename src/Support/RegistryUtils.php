@@ -25,20 +25,22 @@ final class RegistryUtils
     }
 
     /**
-     * Returns names of fields and computed fields that are string type.
+     * Returns names of fields and computed fields that are string-like types.
      *
      * @return list<string>
      */
     public static function stringFieldNames(ResourceDefinitionInterface $res): array
     {
+        $stringLike = [FieldType::String, FieldType::Text, FieldType::Email, FieldType::Url, FieldType::Enum];
+
         $names = [];
         foreach ($res->getFields() as $field) {
-            if ($field->getType() === FieldType::String) {
+            if (\in_array($field->getType(), $stringLike, true)) {
                 $names[] = $field->getName();
             }
         }
         foreach ($res->getComputedFields() as $computed) {
-            if ($computed->getType() === FieldType::String) {
+            if (\in_array($computed->getType(), $stringLike, true)) {
                 $names[] = $computed->getName();
             }
         }

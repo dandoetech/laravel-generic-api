@@ -246,7 +246,7 @@ final class QueryApplier
 
         $names = [];
         foreach ($res->getFields() as $field) {
-            if ($field->getType() === FieldType::String) {
+            if (self::isStringLikeType($field->getType())) {
                 $names[] = $field->getName();
             }
         }
@@ -265,12 +265,23 @@ final class QueryApplier
 
         $names = [];
         foreach ($res->getComputedFields() as $computed) {
-            if ($computed->getType() === FieldType::String) {
+            if (self::isStringLikeType($computed->getType())) {
                 $names[] = $computed->getName();
             }
         }
 
         return $names;
+    }
+
+    private static function isStringLikeType(FieldType $type): bool
+    {
+        return \in_array($type, [
+            FieldType::String,
+            FieldType::Text,
+            FieldType::Email,
+            FieldType::Url,
+            FieldType::Enum,
+        ], true);
     }
 
     private function resolveComputed(ComputedFieldDefinitionInterface $computed): ?EloquentComputedResolver
