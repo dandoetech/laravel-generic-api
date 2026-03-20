@@ -1,5 +1,7 @@
 # Laravel Generic API
 
+> **Pre-release** — Architecture by senior tech lead, implementation largely AI-assisted with human review. Not fully reviewed. Architecture may change before v1.0.0.
+
 Registry-driven CRUD controller for Laravel. One controller handles all resources — validation, authorization, filtering, sorting, pagination, and computed fields are derived from the Resource Registry.
 
 ## Installation
