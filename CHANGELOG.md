@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-03-20
+
 ### Added
 - Explicit route registration per resource (replaces dynamic route-for-all approach)
 - `QueryApplier` with typed filter operators: `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `like`, `between`
